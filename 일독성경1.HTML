@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>365 개역개정 통독</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com');
+        body { font-family: 'Noto Serif KR', serif; line-height: 1.8; }
+        .verse-num { color: #3b82f6; font-weight: bold; font-size: 0.85em; margin-right: 5px; }
+        .chapter-head { background: #f8fafc; padding: 10px; border-radius: 8px; font-weight: bold; margin: 20px 0 10px; color: #1e40af; border-left: 4px solid #3b82f6; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+    <div class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-xl">
+        <!-- 헤더 & 진행률 -->
+        <header class="p-5 border-b sticky top-0 bg-white/90 backdrop-blur-md z-10">
+            <div class="flex justify-between items-center text-sm mb-1">
+                <span id="date-label" class="text-blue-600 font-bold">로딩 중...</span>
+                <span id="status-badge" class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs">미독</span>
+            </div>
+            <h1 id="range-label" class="text-2xl font-black mb-3">본문을 불러오는 중...</h1>
+            <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <div id="progress-text" class="text-[10px] text-right text-slate-400 mt-1 font-sans">0% (0/365)</div>
+        </header>
+
+        <!-- 본문 영역 -->
+        <main id="bible-viewer" class="flex-1 p-6 overflow-y-auto text-lg italic-none">
+            <p class="text-slate-400 text-center py-20">성경 파일을 불러오고 있습니다...</p>
+        </main>
+
+        <!-- 푸터 버튼 영역 -->
+        <footer class="p-4 border-t bg-slate-50">
+            <button id="check-btn" onclick="toggleRead()" class="w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-all transform active:scale-95 bg-blue-600 mb-2">
+                오늘의 읽기 완료
+            </button>
+            <button onclick="resetData()" class="w-full py-2 text-xs text-slate-400 hover:text-red-500 transition-colors">
+                통독 기록 전체 초기화
+            </button>
+        </footer>
+    </div>
+
+    <script>
+        // 1. 일독표 데이터 (실제 데이터로 확장 필요)
+        const planData = {
+"01-01": { "book": "창세기", "abbr": "창", "start": 1, "end": 3 },
+"01-02": { "book": "창세기", "abbr": "창", "start": 4, "end": 6 },
+"01-03": { "book": "창세기", "abbr": "창", "start": 7, "end": 9 },
+"01-04": { "book": "창세기", "abbr": "창", "start": 10, "end": 13 },
+"01-05": { "book": "창세기", "abbr": "창", "start": 14, "end": 17 },
+"01-06": { "book": "창세기", "abbr": "창", "start": 18, "end": 20 },
+"01-07": { "book": "창세기", "abbr": "창", "start": 21, "end": 23 },
+"01-08": { "book": "창세기", "abbr": "창", "start": 24, "end": 25 },
+"01-09": { "book": "창세기", "abbr": "창", "start": 26, "end": 27 },
+"01-10": { "book": "창세기", "abbr": "창", "start": 28, "end": 30 },
+"01-11": { "book": "창세기", "abbr": "창", "start": 31, "end": 32 },
+"01-12": { "book": "창세기", "abbr": "창", "start": 33, "end": 36 },
+"01-13": { "book": "창세기", "abbr": "창", "start": 37, "end": 39 },
+"01-14": { "book": "창세기", "abbr": "창", "start": 40, "end": 42 },
+"01-15": { "book": "창세기", "abbr": "창", "start": 43, "end": 45 },
+"01-16": { "book": "창세기", "abbr": "창", "start": 46, "end": 48 },
+"01-17": { "book": "창세기", "abbr": "창", "start": 49, "end": 50 },
+"01-18": { "book": "출애굽기", "abbr": "출", "start": 1, "end": 3 },
+"01-19": { "book": "출애굽기", "abbr": "출", "start": 4, "end": 6 },
+"01-20": { "book": "출애굽기", "abbr": "출", "start": 7, "end": 9 },
+"01-21": { "book": "출애굽기", "abbr": "출", "start": 10, "end": 12 },
+"01-22": { "book": "출애굽기", "abbr": "출", "start": 13, "end": 15 },
+"01-23": { "book": "출애굽기", "abbr": "출", "start": 16, "end": 18 },
+"01-24": { "book": "출애굽기", "abbr": "출", "start": 19, "end": 21 },
+"01-25": { "book": "출애굽기", "abbr": "출", "start": 22, "end": 24 },
+"01-26": { "book": "출애굽기", "abbr": "출", "start": 25, "end": 26 },
+"01-27": { "book": "출애굽기", "abbr": "출", "start": 27, "end": 29 },
+"01-28": { "book": "출애굽기", "abbr": "출", "start": 30, "end": 32 },
+"01-29": { "book": "출애굽기", "abbr": "출", "start": 33, "end": 35 },
+"01-30": { "book": "출애굽기", "abbr": "출", "start": 36, "end": 38 },
+"01-31": { "book": "출애굽기", "abbr": "출", "start": 39, "end": 40 },
+"02-01": { "book": "레위기", "abbr": "레", "start": 1, "end": 4 },
+"02-02": { "book": "레위기", "abbr": "레", "start": 5, "end": 7 },
+"02-03": { "book": "레위기", "abbr": "레", "start": 8, "end": 10 },
+"02-04": { "book": "레위기", "abbr": "레", "start": 11, "end": 13 },
+"02-05": { "book": "레위기", "abbr": "레", "start": 14, "end": 15 },
+"02-06": { "book": "레위기", "abbr": "레", "start": 16, "end": 18 },
+"02-07": { "book": "레위기", "abbr": "레", "start": 19, "end": 21 },
+"02-08": { "book": "레위기", "abbr": "레", "start": 22, "end": 24 },
+"02-09": { "book": "레위기", "abbr": "레", "start": 25, "end": 27 },
+"02-10": { "book": "민수기", "abbr": "민", "start": 1, "end": 3 },
+"02-11": { "book": "민수기", "abbr": "민", "start": 4, "end": 6 },
+"02-12": { "book": "민수기", "abbr": "민", "start": 7, "end": 9 },
+"02-13": { "book": "민수기", "abbr": "민", "start": 10, "end": 12 },
+"02-14": { "book": "민수기", "abbr": "민", "start": 13, "end": 15 },
+"02-15": { "book": "민수기", "abbr": "민", "start": 16, "end": 18 },
+"02-16": { "book": "민수기", "abbr": "민", "start": 19, "end": 21 },
+"02-17": { "book": "민수기", "abbr": "민", "start": 22, "end": 24 },
+"02-18": { "book": "민수기", "abbr": "민", "start": 25, "end": 27 },
+"02-19": { "book": "민수기", "abbr": "민", "start": 28, "end": 30 },
+"02-20": { "book": "민수기", "abbr": "민", "start": 31, "end": 33 },
+"02-21": { "book": "민수기", "abbr": "민", "start": 34, "end": 36 },
+"02-22": { "book": "신명기", "abbr": "신", "start": 1, "end": 3 },
+"02-23": { "book": "신명기", "abbr": "신", "start": 4, "end": 6 },
+"02-24": { "book": "신명기", "abbr": "신", "start": 7, "end": 9 },
+"02-25": { "book": "신명기", "abbr": "신", "start": 10, "end": 12 },
+"02-26": { "book": "신명기", "abbr": "신", "start": 13, "end": 15 },
+"02-27": { "book": "신명기", "abbr": "신", "start": 16, "end": 18 },
+"02-28": { "book": "신명기", "abbr": "신", "start": 19, "end": 21 },
+"03-01": { "book": "신명기", "abbr": "신", "start": 22, "end": 24 },
+"03-02": { "book": "신명기", "abbr": "신", "start": 25, "end": 27 },
+"03-03": { "book": "신명기", "abbr": "신", "start": 28, "end": 28 },
+"03-04": { "book": "신명기", "abbr": "신", "start": 29, "end": 31 },
+"03-05": { "book": "신명기", "abbr": "신", "start": 32, "end": 28 },
+"03-06": { "book": "신명기", "abbr": "신", "start": 33, "end": 34 },
+"03-07": { "book": "여호수아", "abbr": "수", "start": 1, "end": 4 },
+"03-08": { "book": "여호수아", "abbr": "수", "start": 5, "end": 7 },
+"03-09": { "book": "여호수아", "abbr": "수", "start": 8, "end": 9 },
+"03-10": { "book": "여호수아", "abbr": "수", "start": 10, "end": 11 },
+"03-11": { "book": "여호수아", "abbr": "수", "start": 12, "end": 14 },
+"03-12": { "book": "여호수아", "abbr": "수", "start": 15, "end": 17 },
+"03-13": { "book": "여호수아", "abbr": "수", "start": 18, "end": 20 },
+"03-14": { "book": "여호수아", "abbr": "수", "start": 21, "end": 22 },
+"03-15": { "book": "여호수아", "abbr": "수", "start": 23, "end": 24 },
+"03-16": { "book": "사사기", "abbr": "삿", "start": 1, "end": 2 },
+"03-17": { "book": "사사기", "abbr": "삿", "start": 3, "end": 4 },
+"03-18": { "book": "사사기", "abbr": "삿", "start": 5, "end": 6 },
+"03-19": { "book": "사사기", "abbr": "삿", "start": 7, "end": 8 },
+"03-20": { "book": "사사기", "abbr": "삿", "start": 9, "end": 10 },
+"03-21": { "book": "사사기", "abbr": "삿", "start": 11, "end": 13 },
+"03-22": { "book": "사사기", "abbr": "삿", "start": 14, "end": 16 },
+"03-23": { "book": "사사기", "abbr": "삿", "start": 17, "end": 19 },
+"03-24": { "book": "사사기", "abbr": "삿", "start": 20, "end": 21 },
+"03-25": { "book": "룻기", "abbr": "룻", "start": 1, "end": 4 },
+"03-26": { "book": "사무엘상", "abbr": "삼상", "start": 1, "end": 2 },
+"03-27": { "book": "사무엘상", "abbr": "삼상", "start": 3, "end": 6 },
+"03-28": { "book": "사무엘상", "abbr": "삼상", "start": 7, "end": 9 },
+"03-29": { "book": "사무엘상", "abbr": "삼상", "start": 10, "end": 12 },
+"03-30": { "book": "사무엘상", "abbr": "삼상", "start": 13, "end": 14 },
+"03-31": { "book": "사무엘상", "abbr": "삼상", "start": 15, "end": 16 },
+"04-01": { "book": "사무엘상", "abbr": "삼상", "start": 17, "end": 18 },
+"04-02": { "book": "사무엘상", "abbr": "삼상", "start": 19, "end": 20 },
+"04-03": { "book": "사무엘상", "abbr": "삼상", "start": 21, "end": 23 },
+"04-04": { "book": "사무엘상", "abbr": "삼상", "start": 24, "end": 25 },
+"04-05": { "book": "사무엘상", "abbr": "삼상", "start": 26, "end": 28 },
+"04-06": { "book": "사무엘상", "abbr": "삼상", "start": 29, "end": 31 },
+"04-07": { "book": "사무엘하", "abbr": "삼하", "start": 1, "end": 3 },
+"04-08": { "book": "사무엘하", "abbr": "삼하", "start": 4, "end": 7 },
+"04-09": { "book": "사무엘하", "abbr": "삼하", "start": 8, "end": 11 },
+"04-10": { "book": "사무엘하", "abbr": "삼하", "start": 12, "end": 13 },
+"04-11": { "book": "사무엘하", "abbr": "삼하", "start": 14, "end": 15 },
+"04-12": { "book": "사무엘하", "abbr": "삼하", "start": 16, "end": 18 },
+"04-13": { "book": "사무엘하", "abbr": "삼하", "start": 19, "end": 21 },
+"04-14": { "book": "사무엘하", "abbr": "삼하", "start": 22, "end": 24 },
+"04-15": { "book": "열왕기상", "abbr": "왕상", "start": 1, "end": 3 },
+"04-16": { "book": "열왕기상", "abbr": "왕상", "start": 4, "end": 6 },
+"04-17": { "book": "열왕기상", "abbr": "왕상", "start": 7, "end": 9 },
+"04-18": { "book": "열왕기상", "abbr": "왕상", "start": 10, "end": 12 },
+"04-19": { "book": "열왕기상", "abbr": "왕상", "start": 13, "end": 14 },
+"04-20": { "book": "열왕기상", "abbr": "왕상", "start": 15, "end": 17 },
+"04-21": { "book": "열왕기상", "abbr": "왕상", "start": 18, "end": 20 },
+"04-22": { "book": "열왕기상", "abbr": "왕상", "start": 21, "end": 22 },
+"04-23": { "book": "열왕기하", "abbr": "왕하", "start": 1, "end": 3 },
+"04-24": { "book": "열왕기하", "abbr": "왕하", "start": 4, "end": 6 },
+"04-25": { "book": "열왕기하", "abbr": "왕하", "start": 7, "end": 9 },
+"04-26": { "book": "열왕기하", "abbr": "왕하", "start": 10, "end": 12 },
+"04-27": { "book": "열왕기하", "abbr": "왕하", "start": 13, "end": 15 },
+"04-28": { "book": "열왕기하", "abbr": "왕하", "start": 16, "end": 18 },
+"04-29": { "book": "열왕기하", "abbr": "왕하", "start": 19, "end": 22 },
+"04-30": { "book": "열왕기하", "abbr": "왕하", "start": 23, "end": 25 },
+"05-01": { "book": "역대상", "abbr": "대상", "start": 1, "end": 3 },
+"05-02": { "book": "역대상", "abbr": "대상", "start": 4, "end": 6 },
+"05-03": { "book": "역대상", "abbr": "대상", "start": 7, "end": 10 },
+"05-04": { "book": "역대상", "abbr": "대상", "start": 11, "end": 13 },
+"05-05": { "book": "역대상", "abbr": "대상", "start": 14, "end": 17 },
+"05-06": { "book": "역대상", "abbr": "대상", "start": 18, "end": 21 },
+"05-07": { "book": "역대상", "abbr": "대상", "start": 22, "end": 24 },
+"05-08": { "book": "역대상", "abbr": "대상", "start": 25, "end": 27 },
+"05-09": { "book": "역대상", "abbr": "대상", "start": 28, "end": 29 },
+"05-10": { "book": "역대하", "abbr": "대하", "start": 1, "end": 4 },
+"05-11": { "book": "역대하", "abbr": "대하", "start": 5, "end": 8 },
+"05-12": { "book": "역대하", "abbr": "대하", "start": 9, "end": 12 },
+"05-13": { "book": "역대하", "abbr": "대하", "start": 13, "end": 16 },
+"05-14": { "book": "역대하", "abbr": "대하", "start": 17, "end": 20 },
+"05-15": { "book": "역대하", "abbr": "대하", "start": 21, "end": 24 },
+"05-16": { "book": "역대하", "abbr": "대하", "start": 25, "end": 28 },
+"05-17": { "book": "역대하", "abbr": "대하", "start": 29, "end": 32 },
+"05-18": { "book": "역대하", "abbr": "대하", "start": 33, "end": 36 },
+"05-19": { "book": "에스라", "abbr": "스", "start": 1, "end": 3 },
+"05-20": { "book": "에스라", "abbr": "스", "start": 4, "end": 6 },
+"05-21": { "book": "에스라", "abbr": "스", "start": 7, "end": 10 },
+"05-22": { "book": "느헤미야", "abbr": "느", "start": 1, "end": 4 },
+"05-23": { "book": "느헤미야", "abbr": "느", "start": 5, "end": 8 },
+"05-24": { "book": "느헤미야", "abbr": "느", "start": 9, "end": 13 },
+"05-25": { "book": "에스더", "abbr": "에", "start": 1, "end": 3 },
+"05-26": { "book": "에스더", "abbr": "에", "start": 4, "end": 6 },
+"05-27": { "book": "에스더", "abbr": "에", "start": 7, "end": 10 },
+"05-28": { "book": "욥기", "abbr": "욥", "start": 1, "end": 6 },
+"05-29": { "book": "욥기", "abbr": "욥", "start": 7, "end": 12 },
+"05-30": { "book": "욥기", "abbr": "욥", "start": 13, "end": 18 },
+"05-31": { "book": "욥기", "abbr": "욥", "start": 19, "end": 24 },
+"06-01": { "book": "욥기", "abbr": "욥", "start": 25, "end": 30 },
+"06-02": { "book": "욥기", "abbr": "욥", "start": 31, "end": 35 },
+"06-03": { "book": "욥기", "abbr": "욥", "start": 36, "end": 39 },
+"06-04": { "book": "욥기", "abbr": "욥", "start": 40, "end": 42 },
+"06-05": { "book": "시편", "abbr": "시", "start": 1, "end": 5 },
+"06-06": { "book": "시편", "abbr": "시", "start": 6, "end": 10 },
+"06-07": { "book": "시편", "abbr": "시", "start": 11, "end": 14 },
+"06-08": { "book": "시편", "abbr": "시", "start": 15, "end": 21 },
+"06-09": { "book": "시편", "abbr": "시", "start": 22, "end": 27 },
+"06-10": { "book": "시편", "abbr": "시", "start": 28, "end": 35 },
+"06-11": { "book": "시편", "abbr": "시", "start": 36, "end": 42 },
+"06-12": { "book": "시편", "abbr": "시", "start": 43, "end": 49 },
+"06-13": { "book": "시편", "abbr": "시", "start": 50, "end": 56 },
+"06-14": { "book": "시편", "abbr": "시", "start": 57, "end": 62 },
+"06-15": { "book": "시편", "abbr": "시", "start": 63, "end": 68 },
+"06-16": { "book": "시편", "abbr": "시", "start": 69, "end": 73 },
+"06-17": { "book": "시편", "abbr": "시", "start": 74, "end": 78 },
+"06-18": { "book": "시편", "abbr": "시", "start": 79, "end": 84 },
+"06-19": { "book": "시편", "abbr": "시", "start": 85, "end": 91 },
+"06-20": { "book": "시편", "abbr": "시", "start": 92, "end": 98 },
+"06-21": { "book": "시편", "abbr": "시", "start": 99, "end": 105 },
+"06-22": { "book": "시편", "abbr": "시", "start": 106, "end": 112 },
+"06-23": { "book": "시편", "abbr": "시", "start": 113, "end": 118 },
+"06-24": { "book": "시편", "abbr": "시", "start": 119, "end": 119 },
+"06-25": { "book": "시편", "abbr": "시", "start": 120, "end": 124 },
+"06-26": { "book": "시편", "abbr": "시", "start": 125, "end": 129 },
+"06-27": { "book": "시편", "abbr": "시", "start": 130, "end": 134 },
+"06-28": { "book": "시편", "abbr": "시", "start": 135, "end": 139 },
+"06-29": { "book": "시편", "abbr": "시", "start": 140, "end": 144 },
+"06-30": { "book": "시편", "abbr": "시", "start": 145, "end": 150 },
+"07-01": { "book": "잠언", "abbr": "잠", "start": 1, "end": 4 },
+"07-02": { "book": "잠언", "abbr": "잠", "start": 5, "end": 9 },
+"07-03": { "book": "잠언", "abbr": "잠", "start": 10, "end": 14 },
+"07-04": { "book": "잠언", "abbr": "잠", "start": 15, "end": 19 },
+"07-05": { "book": "잠언", "abbr": "잠", "start": 20, "end": 24 },
+"07-06": { "book": "잠언", "abbr": "잠", "start": 25, "end": 31 },
+"07-07": { "book": "전도서", "abbr": "전", "start": 1, "end": 6 },
+"07-08": { "book": "전도서", "abbr": "전", "start": 7, "end": 12 },
+"07-09": { "book": "아가", "abbr": "아", "start": 1, "end": 4 },
+"07-10": { "book": "아가", "abbr": "아", "start": 5, "end": 8 },
+"07-11": { "book": "이사야", "abbr": "사", "start": 1, "end": 3 },
+"07-12": { "book": "이사야", "abbr": "사", "start": 4, "end": 6 },
+"07-13": { "book": "이사야", "abbr": "사", "start": 7, "end": 9 },
+"07-14": { "book": "이사야", "abbr": "사", "start": 10, "end": 13 },
+"07-15": { "book": "이사야", "abbr": "사", "start": 14, "end": 16 },
+"07-16": { "book": "이사야", "abbr": "사", "start": 17, "end": 19 },
+"07-17": { "book": "이사야", "abbr": "사", "start": 20, "end": 22 },
+"07-18": { "book": "이사야", "abbr": "사", "start": 23, "end": 25 },
+"07-19": { "book": "이사야", "abbr": "사", "start": 26, "end": 28 },
+"07-20": { "book": "이사야", "abbr": "사", "start": 29, "end": 31 },
+"07-21": { "book": "이사야", "abbr": "사", "start": 32, "end": 35 },
+"07-22": { "book": "이사야", "abbr": "사", "start": 36, "end": 38 },
+"07-23": { "book": "이사야", "abbr": "사", "start": 39, "end": 41 },
+"07-24": { "book": "이사야", "abbr": "사", "start": 42, "end": 44 },
+"07-25": { "book": "이사야", "abbr": "사", "start": 45, "end": 47 },
+"07-26": { "book": "이사야", "abbr": "사", "start": 48, "end": 50 },
+"07-27": { "book": "이사야", "abbr": "사", "start": 51, "end": 53 },
+"07-28": { "book": "이사야", "abbr": "사", "start": 54, "end": 56 },
+"07-29": { "book": "이사야", "abbr": "사", "start": 57, "end": 59 },
+"07-30": { "book": "이사야", "abbr": "사", "start": 60, "end": 63 },
+"07-31": { "book": "이사야", "abbr": "사", "start": 64, "end": 66 },
+"08-01": { "book": "예레미야", "abbr": "렘", "start": 1, "end": 3 },
+"08-02": { "book": "예레미야", "abbr": "렘", "start": 4, "end": 6 },
+"08-03": { "book": "예레미야", "abbr": "렘", "start": 7, "end": 9 },
+"08-04": { "book": "예레미야", "abbr": "렘", "start": 10, "end": 12 },
+"08-05": { "book": "예레미야", "abbr": "렘", "start": 13, "end": 15 },
+"08-06": { "book": "예레미야", "abbr": "렘", "start": 16, "end": 18 },
+"08-07": { "book": "예레미야", "abbr": "렘", "start": 19, "end": 21 },
+"08-08": { "book": "예레미야", "abbr": "렘", "start": 22, "end": 24 },
+"08-09": { "book": "예레미야", "abbr": "렘", "start": 25, "end": 27 },
+"08-10": { "book": "예레미야", "abbr": "렘", "start": 28, "end": 30 },
+"08-11": { "book": "예레미야", "abbr": "렘", "start": 31, "end": 33 },
+"08-12": { "book": "예레미야", "abbr": "렘", "start": 34, "end": 36 },
+"08-13": { "book": "예레미야", "abbr": "렘", "start": 37, "end": 39 },
+"08-14": { "book": "예레미야", "abbr": "렘", "start": 40, "end": 42 },
+"08-15": { "book": "예레미야", "abbr": "렘", "start": 43, "end": 45 },
+"08-16": { "book": "예레미야", "abbr": "렘", "start": 46, "end": 48 },
+"08-17": { "book": "예레미야", "abbr": "렘", "start": 49, "end": 50 },
+"08-18": { "book": "예레미야", "abbr": "렘", "start": 51, "end": 52 },
+"08-19": { "book": "예레미야애가", "abbr": "애", "start": 1, "end": 2 },
+"08-20": { "book": "예레미야애가", "abbr": "애", "start": 3, "end": 5 },
+"08-21": { "book": "에스겔", "abbr": "겔", "start": 1, "end": 3 },
+"08-22": { "book": "에스겔", "abbr": "겔", "start": 4, "end": 6 },
+"08-23": { "book": "에스겔", "abbr": "겔", "start": 7, "end": 8 },
+"08-24": { "book": "에스겔", "abbr": "겔", "start": 9, "end": 10 },
+"08-25": { "book": "에스겔", "abbr": "겔", "start": 11, "end": 12 },
+"08-26": { "book": "에스겔", "abbr": "겔", "start": 13, "end": 14 },
+"08-27": { "book": "에스겔", "abbr": "겔", "start": 15, "end": 16 },
+"08-28": { "book": "에스겔", "abbr": "겔", "start": 17, "end": 18 },
+"08-29": { "book": "에스겔", "abbr": "겔", "start": 19, "end": 21 },
+"08-30": { "book": "에스겔", "abbr": "겔", "start": 22, "end": 24 },
+"08-31": { "book": "에스겔", "abbr": "겔", "start": 25, "end": 27 },
+"09-01": { "book": "에스겔", "abbr": "겔", "start": 28, "end": 30 },
+"09-02": { "book": "에스겔", "abbr": "겔", "start": 31, "end": 33 },
+"09-03": { "book": "에스겔", "abbr": "겔", "start": 34, "end": 36 },
+"09-04": { "book": "에스겔", "abbr": "겔", "start": 37, "end": 39 },
+"09-05": { "book": "에스겔", "abbr": "겔", "start": 40, "end": 41 },
+"09-06": { "book": "에스겔", "abbr": "겔", "start": 42, "end": 43 },
+"09-07": { "book": "에스겔", "abbr": "겔", "start": 44, "end": 45 },
+"09-08": { "book": "에스겔", "abbr": "겔", "start": 46, "end": 48 },
+"09-09": { "book": "다니엘", "abbr": "단", "start": 1, "end": 3 },
+"09-10": { "book": "다니엘", "abbr": "단", "start": 4, "end": 6 },
+"09-11": { "book": "다니엘", "abbr": "단", "start": 7, "end": 9 },
+"09-12": { "book": "다니엘", "abbr": "단", "start": 10, "end": 12 },
+"09-13": { "book": "호세아", "abbr": "호", "start": 1, "end": 4 },
+"09-14": { "book": "호세아", "abbr": "호", "start": 5, "end": 8 },
+"09-15": { "book": "호세아", "abbr": "호", "start": 9, "end": 14 },
+"09-16": { "book": "요엘", "abbr": "욜", "start": 1, "end": 3 },
+"09-17": { "book": "아모스", "abbr": "암", "start": 1, "end": 5 },
+"09-18": { "book": "아모스", "abbr": "암", "start": 6, "end": 9 },
+"09-19": [ { "book": "오바댜", "abbr": "옵", "start": 1, "end": 1 },
+              { "book": "요나", "abbr": "욘", "start": 1, "end": 4 }],
+"09-20": { "book": "미가", "abbr": "미", "start": 1, "end": 4 },
+"09-21": { "book": "미가", "abbr": "미", "start": 5, "end": 7 },
+"09-22": { "book": "나훔", "abbr": "나", "start": 1, "end": 3 },
+"09-23": { "book": "하박국", "abbr": "합", "start": 1, "end": 3 },
+"09-24": { "book": "스바냐", "abbr": "습", "start": 1, "end": 3 },
+"09-25": { "book": "학개", "abbr": "학", "start": 1, "end": 2 },
+"09-26": { "book": "스가랴", "abbr": "슥", "start": 1, "end": 4 },
+"09-27": { "book": "스가랴", "abbr": "슥", "start": 5, "end": 8 },
+"09-28": { "book": "스가랴", "abbr": "슥", "start": 9, "end": 11 },
+"09-29": { "book": "스가랴", "abbr": "슥", "start": 12, "end": 14 },
+"09-30": { "book": "말라기", "abbr": "말", "start": 1, "end": 4 },
+"10-01": { "book": "마태복음", "abbr": "마", "start": 1, "end": 2 },
+"10-02": { "book": "마태복음", "abbr": "마", "start": 3, "end": 4 },
+"10-03": { "book": "마태복음", "abbr": "마", "start": 5, "end": 6 },
+"10-04": { "book": "마태복음", "abbr": "마", "start": 7, "end": 8 },
+"10-05": { "book": "마태복음", "abbr": "마", "start": 9, "end": 10 },
+"10-06": { "book": "마태복음", "abbr": "마", "start": 11, "end": 12 },
+"10-07": { "book": "마태복음", "abbr": "마", "start": 13, "end": 13 },
+"10-08": { "book": "마태복음", "abbr": "마", "start": 14, "end": 15 },
+"10-09": { "book": "마태복음", "abbr": "마", "start": 16, "end": 17 },
+"10-10": { "book": "마태복음", "abbr": "마", "start": 18, "end": 19 },
+"10-11": { "book": "마태복음", "abbr": "마", "start": 20, "end": 21 },
+"10-12": { "book": "마태복음", "abbr": "마", "start": 22, "end": 23 },
+"10-13": { "book": "마태복음", "abbr": "마", "start": 24, "end": 25 },
+"10-14": { "book": "마태복음", "abbr": "마", "start": 26, "end": 26 },
+"10-15": { "book": "마태복음", "abbr": "마", "start": 27, "end": 28 },
+"10-16": { "book": "마가복음", "abbr": "막", "start": 1, "end": 2 },
+"10-17": { "book": "마가복음", "abbr": "막", "start": 3, "end": 4 },
+"10-18": { "book": "마가복음", "abbr": "막", "start": 5, "end": 6 },
+"10-19": { "book": "마가복음", "abbr": "막", "start": 7, "end": 8 },
+"10-20": { "book": "마가복음", "abbr": "막", "start": 9, "end": 9 },
+"10-21": { "book": "마가복음", "abbr": "막", "start": 10, "end": 10 },
+"10-22": { "book": "마가복음", "abbr": "막", "start": 11, "end": 12 },
+"10-23": { "book": "마가복음", "abbr": "막", "start": 13, "end": 14 },
+"10-24": { "book": "마가복음", "abbr": "막", "start": 15, "end": 16 },
+"10-25": { "book": "누가복음", "abbr": "눅", "start": 1, "end": 1 },
+"10-26": { "book": "누가복음", "abbr": "눅", "start": 2, "end": 3 },
+"10-27": { "book": "누가복음", "abbr": "눅", "start": 4, "end": 5 },
+"10-28": { "book": "누가복음", "abbr": "눅", "start": 6, "end": 7 },
+"10-29": { "book": "누가복음", "abbr": "눅", "start": 8, "end": 9 },
+"10-30": { "book": "누가복음", "abbr": "눅", "start": 10, "end": 11 },
+"10-31": { "book": "누가복음", "abbr": "눅", "start": 12, "end": 13 },
+"11-01": { "book": "누가복음", "abbr": "눅", "start": 14, "end": 15 },
+"11-02": { "book": "누가복음", "abbr": "눅", "start": 16, "end": 17 },
+"11-03": { "book": "누가복음", "abbr": "눅", "start": 18, "end": 19 },
+"11-04": { "book": "누가복음", "abbr": "눅", "start": 20, "end": 21 },
+"11-05": { "book": "누가복음", "abbr": "눅", "start": 22, "end": 23 },
+"11-06": { "book": "누가복음", "abbr": "눅", "start": 24, "end": 24 },
+"11-07": { "book": "요한복음", "abbr": "요", "start": 1, "end": 2 },
+"11-08": { "book": "요한복음", "abbr": "요", "start": 3, "end": 4 },
+"11-09": { "book": "요한복음", "abbr": "요", "start": 5, "end": 5 },
+"11-10": { "book": "요한복음", "abbr": "요", "start": 6, "end": 6 },
+"11-11": { "book": "요한복음", "abbr": "요", "start": 7, "end": 7 },
+"11-12": { "book": "요한복음", "abbr": "요", "start": 8, "end": 8 },
+"11-13": { "book": "요한복음", "abbr": "요", "start": 9, "end": 10 },
+"11-14": { "book": "요한복음", "abbr": "요", "start": 11, "end": 11 },
+"11-15": { "book": "요한복음", "abbr": "요", "start": 12, "end": 14 },
+"11-16": { "book": "요한복음", "abbr": "요", "start": 15, "end": 18 },
+"11-17": { "book": "요한복음", "abbr": "요", "start": 19, "end": 21 },
+"11-18": { "book": "사도행전", "abbr": "행", "start": 1, "end": 3 },
+"11-19": { "book": "사도행전", "abbr": "행", "start": 4, "end": 6 },
+"11-20": { "book": "사도행전", "abbr": "행", "start": 7, "end": 9 },
+"11-21": { "book": "사도행전", "abbr": "행", "start": 10, "end": 12 },
+"11-22": { "book": "사도행전", "abbr": "행", "start": 13, "end": 16 },
+"11-23": { "book": "사도행전", "abbr": "행", "start": 17, "end": 20 },
+"11-24": { "book": "사도행전", "abbr": "행", "start": 21, "end": 24 },
+"11-25": { "book": "사도행전", "abbr": "행", "start": 25, "end": 28 },
+"11-26": { "book": "로마서", "abbr": "롬", "start": 1, "end": 2 },
+"11-27": { "book": "로마서", "abbr": "롬", "start": 3, "end": 4 },
+"11-28": { "book": "로마서", "abbr": "롬", "start": 5, "end": 8 },
+"11-29": { "book": "로마서", "abbr": "롬", "start": 9, "end": 12 },
+"11-30": { "book": "로마서", "abbr": "롬", "start": 13, "end": 16 },
+"12-01": { "book": "고린도전서", "abbr": "고전", "start": 1, "end": 5 },
+"12-02": { "book": "고린도전서", "abbr": "고전", "start": 6, "end": 10 },
+"12-03": { "book": "고린도전서", "abbr": "고전", "start": 11, "end": 16 },
+"12-04": { "book": "고린도후서", "abbr": "고후", "start": 1, "end": 4 },
+"12-05": { "book": "고린도후서", "abbr": "고후", "start": 5, "end": 8 },
+"12-06": { "book": "고린도후서", "abbr": "고후", "start": 9, "end": 13 },
+"12-07": { "book": "갈라디아서", "abbr": "갈", "start": 1, "end": 6 },
+"12-08": { "book": "에베소서", "abbr": "엡", "start": 1, "end": 6 },
+"12-09": { "book": "빌립보서", "abbr": "빌", "start": 1, "end": 4 },
+"12-10": { "book": "골로새서", "abbr": "골", "start": 1, "end": 4 },
+"12-11": { "book": "데살로니가전서", "abbr": "살전", "start": 1, "end": 5 },
+"12-12": { "book": "데살로니가후서", "abbr": "살후", "start": 1, "end": 3 },
+"12-13": { "book": "디모데전서", "abbr": "딤전", "start": 1, "end": 3 },
+"12-14": { "book": "디모데전서", "abbr": "딤전", "start": 4, "end": 6 },
+"12-15": { "book": "디모데후서", "abbr": "딤후", "start": 1, "end": 4 },
+"12-16": [{ "book": "디도서", "abbr": "딛", "start": 1, "end": 3 },
+	{ "book": "빌레몬서", "abbr": "몬", "start": 1, "end": 1 }],
+"12-17": { "book": "히브리서", "abbr": "히", "start": 1, "end": 4 },
+"12-18": { "book": "히브리서", "abbr": "히", "start": 5, "end": 8 },
+"12-19": { "book": "히브리서", "abbr": "히", "start": 9, "end": 13 },
+"12-20": { "book": "야고보서", "abbr": "약", "start": 1, "end": 5 },
+"12-21": { "book": "베드로전서", "abbr": "벧전", "start": 1, "end": 5 },
+"12-22": { "book": "베드로후서", "abbr": "벧후", "start": 1, "end": 3 },
+"12-23": { "book": "요한일서", "abbr": "요일", "start": 1, "end": 3 },
+"12-24": { "book": "요한일서", "abbr": "요일", "start": 4, "end": 5 },
+"12-25":[{ "book": "요한이서", "abbr": "요이", "start": 1, "end": 1 },
+	{ "book": "요한삼서", "abbr": "요삼", "start": 1, "end": 1 },
+	{ "book": "유다서", "abbr": "유", "start": 1, "end": 1 }],
+"12-26": { "book": "요한계시록", "abbr": "계", "start": 1, "end": 4 },
+"12-27": { "book": "요한계시록", "abbr": "계", "start": 5, "end": 8 },
+"12-28": { "book": "요한계시록", "abbr": "계", "start": 9, "end": 12 },
+"12-29": { "book": "요한계시록", "abbr": "계", "start": 13, "end": 16 },
+"12-30": { "book": "요한계시록", "abbr": "계", "start": 17, "end": 19 },
+"12-31": { "book": "요한계시록", "abbr": "계", "start": 20, "end": 22 },
+
+        };
+
+        function getTodayKey() {
+            const now = new Date();
+            return `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        // 2. 성경 본문 로드 및 파싱
+     async function loadBibleContent() {
+    const todayKey = getTodayKey();
+    const plan = planData[todayKey]; // 여기서 { "book": "창세기", ... } 를 가져옴
+
+    if (!plan) {
+        document.getElementById('range-label').innerText = "오늘의 계획이 없습니다.";
+        document.getElementById('bible-viewer').innerHTML = "";
+        return;
+    }
+
+    // [수정 포인트] 배열 순서([0])가 아닌 이름(plan.book)으로 가져오기
+    const bookName = plan.book;
+    const abbr = plan.abbr;
+    const startCh = plan.start;
+    const endCh = plan.end;
+
+    document.getElementById('date-label').innerText = todayKey;
+    document.getElementById('range-label').innerText = `${bookName} ${startCh}~${endCh}장`;
+
+    try {
+        // loadBibleContent 함수 내 fetch 부분 수정
+console.log("불러오려는 파일명:", `./${bookName}.txt`); // 브라우저 F12 콘솔에서 확인 가능
+const response = await fetch(`./${bookName}.txt`);
+        if (!response.ok) throw new Error();
+       // 기존: const text = await response.text();
+// 수정: 한국어 인코딩(EUC-KR)으로 강제 변환하여 읽기
+const arrayBuffer = await response.arrayBuffer();
+const decoder = new TextDecoder('euc-kr');
+const text = decoder.decode(arrayBuffer);
+        const lines = text.split('\n');
+
+        let htmlContent = "";
+        let currentChapter = -1;
+
+     lines.forEach(line => {
+    // [설명] ^${abbr} : 약어로 시작
+    // (\\d+):(\\d+) : 장과 절 숫자 추출
+    // \\s+(.*) : 한 칸 띄고 그 뒤의 모든 내용(제목+본문) 추출
+    const regex = new RegExp(`^${abbr}(\\d+):(\\d+)\\s+(.*)`);
+    const match = line.trim().match(regex);
+    
+    if (match) {
+        const chapter = parseInt(match[1]); // 장
+        const verse = match[2];           // 절
+        let content = match[3];         // 제목 포함 본문 ("<천지 창조> 태초에...")
+
+        // 범위 내의 장인 경우에만 화면에 표시
+        if (chapter >= startCh && chapter <= endCh) {
+            // 장이 바뀔 때마다 제목 표시
+            if (currentChapter !== chapter) {
+                htmlContent += `<div class="chapter-head">${chapter}장</div>`;
+                currentChapter = chapter;
+            }
+            
+            // 본문 출력 (제목 <...> 이 있으면 강조하거나 그대로 출력)
+            htmlContent += `<p class="mb-3">
+                <span class="verse-num">${verse}</span>
+                <span class="bible-text">${content}</span>
+            </p>`;
+        }
+    }
+});
+
+        document.getElementById('bible-viewer').innerHTML = htmlContent || "본문 내용을 찾을 수 없습니다.";
+    } catch (e) {
+        document.getElementById('bible-viewer').innerHTML = 
+            `<p class='text-center text-red-400 py-10'>${bookName}.txt 파일을 불러올 수 없습니다.<br><span class='text-xs'>파일명과 경로를 확인해 주세요.</span></p>`;
+    }
+    updateStatusUI();
+    updateOverallProgress();
+        }
+
+        // 3. UI 업데이트 및 상태 관리
+        function updateStatusUI() {
+            const todayKey = getTodayKey();
+            const isRead = localStorage.getItem(`read-${todayKey}`) === 'true';
+            const badge = document.getElementById('status-badge');
+            const btn = document.getElementById('check-btn');
+
+            if (isRead) {
+                badge.innerText = "읽음 완료";
+                badge.className = "px-2 py-0.5 rounded-full bg-green-500 text-white text-xs";
+                btn.innerText = "다시 읽기 (완료됨)";
+                btn.className = "w-full py-4 rounded-2xl font-bold text-white shadow-lg bg-green-600 mb-2";
+            } else {
+                badge.innerText = "미독";
+                badge.className = "px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs";
+                btn.innerText = "오늘의 읽기 완료";
+                btn.className = "w-full py-4 rounded-2xl font-bold text-white shadow-lg bg-blue-600 mb-2";
+            }
+        }
+
+        function toggleRead() {
+            const todayKey = getTodayKey();
+            const isRead = localStorage.getItem(`read-${todayKey}`) === 'true';
+            localStorage.setItem(`read-${todayKey}`, !isRead);
+            updateStatusUI();
+            updateOverallProgress();
+        }
+
+        function updateOverallProgress() {
+            const totalDays = 365;
+            let readCount = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith('read-') && localStorage.getItem(localStorage.key(i)) === 'true') readCount++;
+            }
+            const percentage = Math.round((readCount / totalDays) * 100);
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+            document.getElementById('progress-text').innerText = `${percentage}% (${readCount}/${totalDays}일)`;
+        }
+
+        function resetData() {
+            if (confirm("모든 통독 기록을 초기화하시겠습니까?")) {
+                Object.keys(localStorage).forEach(key => { if(key.startsWith('read-')) localStorage.removeItem(key); });
+                location.reload();
+            }
+        }
+
+        window.onload = loadBibleContent;
+    </script>
+</body>
+</html>
