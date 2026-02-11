@@ -3,50 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>365 개역개정 통독</title>
+    <title>365 성경 통독 앱</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com');
-        body { font-family: 'Noto Serif KR', serif; line-height: 1.8; }
-        .verse-num { color: #3b82f6; font-weight: bold; font-size: 0.85em; margin-right: 5px; }
-        .chapter-head { background: #f8fafc; padding: 10px; border-radius: 8px; font-weight: bold; margin: 20px 0 10px; color: #1e40af; border-left: 4px solid #3b82f6; }
+        body { font-family: 'Noto Serif KR', serif; line-height: 1.8; background-color: #f8fafc; }
+        .verse-num { color: #3b82f6; font-weight: bold; font-size: 0.85em; margin-right: 8px; }
+        .chapter-head { background: #f1f5f9; padding: 15px; border-radius: 10px; font-weight: bold; margin: 25px 0 15px; color: #1e40af; border-left: 5px solid #3b82f6; font-size: 1.25rem; }
+        .calendar-day.read { background-color: #22c55e !important; color: white !important; border-color: #16a34a !important; font-weight: bold; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800">
-    <div class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-xl">
-        <!-- 헤더 & 진행률 -->
-        <header class="p-5 border-b sticky top-0 bg-white/90 backdrop-blur-md z-10">
-            <div class="flex justify-between items-center text-sm mb-1">
-                <span id="date-label" class="text-blue-600 font-bold">로딩 중...</span>
-                <span id="status-badge" class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs">미독</span>
+<div class="flex gap-2 mb-2 justify-end">
+    <button onclick="changeFontSize(-2)" class="px-3 py-1 bg-slate-100 rounded border text-sm font-bold">- 가</button>
+    <button onclick="changeFontSize(2)" class="px-3 py-1 bg-slate-100 rounded border text-sm font-bold">+ 가</button>
+</div>
+<body class="text-slate-800">
+    <div class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-2xl">
+        
+        <!-- 상단 헤더 -->
+        <header class="p-5 border-b sticky top-0 bg-white/95 backdrop-blur-sm z-50">
+            <div class="flex justify-between items-center text-sm mb-1 font-sans">
+                <span id="header-date" class="text-blue-600 font-bold">오늘의 통독</span>
+                <span id="header-status" class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs">미독</span>
             </div>
-            <h1 id="range-label" class="text-2xl font-black mb-3">본문을 불러오는 중...</h1>
+            <h1 id="header-title" class="text-2xl font-black mb-3">말씀을 불러오는 중...</h1>
             <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
+                <div id="header-progress" class="bg-blue-500 h-full transition-all duration-1000" style="width: 0%"></div>
             </div>
-            <div id="progress-text" class="text-[10px] text-right text-slate-400 mt-1 font-sans">0% (0/365)</div>
         </header>
 
-        <!-- 본문 영역 -->
-        <main id="bible-viewer" class="flex-1 p-6 overflow-y-auto text-lg italic-none">
-            <p class="text-slate-400 text-center py-20">성경 파일을 불러오고 있습니다...</p>
-        </main>
+        <!-- 메뉴 및 선택창 -->
+        <nav class="bg-slate-50 border-b p-3 space-y-2">
+            <div class="flex gap-2">
+                <button onclick="loadToday()" class="flex-1 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-blue-50">오늘의 통독</button>
+                <button onclick="toggleCalendar()" class="flex-1 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-blue-50">기록 달력</button>
+            </div>
+            <div class="flex gap-1">
+                <select id="book-select" onchange="updateChapterList()" class="flex-[2] p-2 border rounded-lg text-sm bg-white outline-none focus:border-blue-500">
+                    <option value="">성경 선택</option>
+                    <option value="창세기" data-abbr="창" data-max="50">창세기</option>
+	      <option value="출애굽기" data-abbr="출" data-max="40">출애굽기</option>
+	      <option value="레위기" data-abbr="레" data-max="27">레위기</option>	
+                    <option value="민수기" data-abbr="민" data-max="36">민수기</option>
+ 	<option value="신명기" data-abbr="신" data-max="34">신명기</option>
+ 	<option value="여호수아" data-abbr="수" data-max="24">여호수아</option>
+	 <option value="사사기" data-abbr="삿" data-max="21">사사기</option>
+	 <option value="룻기" data-abbr="룻" data-max="4">룻기</option>
+	 <option value="사무엘상" data-abbr="삼상" data-max="31">사무엘상</option>
+	 <option value="사무엘하" data-abbr="삼하" data-max="24">사무엘하</option>
+	 <option value="열왕기상" data-abbr="왕상" data-max="22">열왕기상</option>
+ 	<option value="열왕기하" data-abbr="왕하" data-max="25">열왕기하</option>
+ 	<option value="역대상" data-abbr="대상" data-max="29">역대상</option>
+	 <option value="역대하" data-abbr="대하" data-max="36">역대하</option>
+	 <option value="에스라" data-abbr="스" data-max="10">에스라</option>
+ 	<option value="느헤미야" data-abbr="느" data-max="13">느헤미야</option>
+ 	<option value="에스더" data-abbr="에" data-max="10">에스더</option>
+ 	<option value="욥기" data-abbr="욥" data-max="42">욥기</option>
+	 <option value="시편" data-abbr="시" data-max="150">시편</option>
+ 	<option value="잠언" data-abbr="잠" data-max="31">잠언</option>
+ 	<option value="전도서" data-abbr="전" data-max="12">전도서</option>
+ 	<option value="아가" data-abbr="아" data-max="8">아가</option>
+ 	<option value="이사야" data-abbr="사" data-max="66">이사야</option>
+ 	<option value="예레미야" data-abbr="렘" data-max="52">예레미야</option>
+ 	<option value="예레미야애가" data-abbr="애" data-max="5">예레미야애가</option>
+	 <option value="에스겔" data-abbr="겔" data-max="48">에스겔</option>
+	 <option value="다니엘" data-abbr="단" data-max="12">다니엘</option>
+	 <option value="호세아" data-abbr="호" data-max="14">호세아</option>
+	 <option value="요엘" data-abbr="욜" data-max="3">요엘</option>
+	 <option value="아모스" data-abbr="암" data-max="9">아모스</option>
+ 	<option value="오바댜" data-abbr="옵" data-max="1">오바댜</option>
+ 	<option value="요나" data-abbr="욘" data-max="4">요나</option>
+ 	<option value="미가" data-abbr="미" data-max="7">미가</option>
+ 	<option value="나훔" data-abbr="나" data-max="3">나훔</option>
+	 <option value="하박국" data-abbr="합" data-max="3">하박국</option>
+ 	<option value="스바냐" data-abbr="습" data-max="3">스바냐</option>
+ 	<option value="학개" data-abbr="학" data-max="2">학개</option>
+ 	<option value="스가랴" data-abbr="슥" data-max="11">스가랴</option>
+ 	<option value="말라기" data-abbr="말" data-max="4">말라기</option>
+ 	<option value="마태복음" data-abbr="마" data-max="28">마태복음</option>
+ 	<option value="마가복음" data-abbr="막" data-max="16">마가복음</option>
+ 	<option value="누가복음" data-abbr="눅" data-max="24">누가복음</option>
+ 	<option value="요한복음" data-abbr="요" data-max="21">요한복음</option>
+ 	<option value="사도행전" data-abbr="행" data-max="28">사도행전</option>
+ 	<option value="로마서" data-abbr="롬" data-max="16">로마서</option>
+ 	<option value="고린도전서" data-abbr="고전" data-max="16">고린도전서</option>
+ 	<option value="고린도후서" data-abbr="고후" data-max="13">고린도후서</option>
+ 	<option value="갈라디아서" data-abbr="갈" data-max="6">갈라디아서</option>
+ 	<option value="에베소서" data-abbr="엡" data-max="6">에베소서</option>
+ 	<option value="빌립보서" data-abbr="빌" data-max="4">빌립보서</option>
+ 	<option value="골로새서" data-abbr="골" data-max="4">골로새서</option>
+ 	<option value="데살로니가전서" data-abbr="살전" data-max="5">데살로니가전서</option>
+	 <option value="데살로니가후서" data-abbr="살후" data-max="3">데살로니가후서</option>
+	 <option value="디모데전서" data-abbr="딤전" data-max="6">디모데전서</option>
+ 	<option value="디모데후서" data-abbr="딤후" data-max="4">디모데후서</option>
+ 	<option value="디도서" data-abbr="딛" data-max="3">디도서</option>
+ 	<option value="빌레몬서" data-abbr="몬" data-max="1">빌레몬서</option>
+	 <option value="히브리서" data-abbr="히" data-max="13">히브리서</option>
+ 	<option value="야고보서" data-abbr="약" data-max="5">야고보서</option>
+ 	<option value="베드로전서" data-abbr="벧전" data-max="5">베드로전서</option>
+	 <option value="베드로후서" data-abbr="벧후" data-max="3">베드로후서</option>
+ 	<option value="요한일서" data-abbr="요일" data-max="5">요한일서</option>
+ 	<option value="요한이서" data-abbr="요이" data-max="1">요한이서</option>
+	 <option value="요한삼서" data-abbr="요삼" data-max="1">요한삼서</option>
+	 <option value="유다서" data-abbr="유" data-max="1">유다서</option>
+ 	<option value="요한계시록" data-abbr="계" data-max="22">요한계시록</option>
+                </select>
+                <select id="chapter-select" class="flex-1 p-2 border rounded-lg text-sm bg-white outline-none">
+                    <option value="">장</option>
+                </select>
+                <button onclick="loadManual()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold active:scale-95 transition-transform">이동</button>
+            </div>
+        </nav>
 
-        <!-- 푸터 버튼 영역 -->
-        <footer class="p-4 border-t bg-slate-50">
-            <button id="check-btn" onclick="toggleRead()" class="w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-all transform active:scale-95 bg-blue-600 mb-2">
+        <!-- 달력 (기본 숨김) -->
+        <div id="calendar-view" class="hidden p-4 bg-white border-b shadow-inner">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-sm text-slate-700">월별 기록 확인</h3>
+                <select id="calendar-month" onchange="renderCalendar()" class="text-sm border rounded p-1">
+                    	<option value="01">1월</option>
+	      	<option value="02">2월</option>
+                    	<option value="03">3월</option>
+ 	      	<option value="04">4월</option>
+ 	     	<option value="05">5월</option>
+	 	<option value="06">6월</option>
+ 		<option value="07">7월</option>
+	 	<option value="08">8월</option>
+ 		<option value="09">9월</option>
+ 		<option value="10">10월</option>
+	 	<option value="11">11월</option>
+ 		<option value="12">12월</option>
+                </select>
+            </div>
+            <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
+        </div>
+
+        <!-- 본문 뷰어 -->
+        <main id="bible-viewer" class="flex-1 p-6 overflow-y-auto text-lg leading-relaxed"></main>
+
+        <!-- 읽기 완료 버튼 -->
+        <footer class="p-4 border-t bg-slate-50 sticky bottom-0 z-40">
+            <button id="read-btn" onclick="toggleReadStatus()" class="w-full py-4 rounded-2xl font-bold text-white shadow-lg bg-blue-600 transition-all active:scale-95">
                 오늘의 읽기 완료
-            </button>
-            <button onclick="resetData()" class="w-full py-2 text-xs text-slate-400 hover:text-red-500 transition-colors">
-                통독 기록 전체 초기화
             </button>
         </footer>
     </div>
 
     <script>
-        // 1. 일독표 데이터 (실제 데이터로 확장 필요)
+        // 1. 일독표 데이터 (날짜별 범위)
         const planData = {
-"01-01": { "book": "창세기", "abbr": "창", "start": 1, "end": 3 },
+  "01-01": { "book": "창세기", "abbr": "창", "start": 1, "end": 3 },
 "01-02": { "book": "창세기", "abbr": "창", "start": 4, "end": 6 },
 "01-03": { "book": "창세기", "abbr": "창", "start": 7, "end": 9 },
 "01-04": { "book": "창세기", "abbr": "창", "start": 10, "end": 13 },
@@ -415,134 +520,171 @@
 "12-29": { "book": "요한계시록", "abbr": "계", "start": 13, "end": 16 },
 "12-30": { "book": "요한계시록", "abbr": "계", "start": 17, "end": 19 },
 "12-31": { "book": "요한계시록", "abbr": "계", "start": 20, "end": 22 },
-
         };
 
-        function getTodayKey() {
+        let currentActiveDate = ""; // 현재 보고 있는 통독 날짜 키
+
+        // 2. 초기 로드
+        window.onload = function() {
             const now = new Date();
-            return `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById('calendar-month').value = month;
+            loadToday();
+        };
+
+        function loadToday() {
+            const now = new Date();
+            const dateKey = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            currentActiveDate = dateKey;
+            fetchBibleData(dateKey);
         }
 
-        // 2. 성경 본문 로드 및 파싱
-     async function loadBibleContent() {
-    const todayKey = getTodayKey();
-    const plan = planData[todayKey]; // 여기서 { "book": "창세기", ... } 를 가져옴
-
-    if (!plan) {
-        document.getElementById('range-label').innerText = "오늘의 계획이 없습니다.";
-        document.getElementById('bible-viewer').innerHTML = "";
-        return;
-    }
-
-    // [수정 포인트] 배열 순서([0])가 아닌 이름(plan.book)으로 가져오기
-    const bookName = plan.book;
-    const abbr = plan.abbr;
-    const startCh = plan.start;
-    const endCh = plan.end;
-
-    document.getElementById('date-label').innerText = todayKey;
-    document.getElementById('range-label').innerText = `${bookName} ${startCh}~${endCh}장`;
-
-    try {
-        // loadBibleContent 함수 내 fetch 부분 수정
-console.log("불러오려는 파일명:", `./${bookName}.txt`); // 브라우저 F12 콘솔에서 확인 가능
-const response = await fetch(`./${bookName}.txt`);
-        if (!response.ok) throw new Error();
-       // 기존: const text = await response.text();
-// 수정: 한국어 인코딩(EUC-KR)으로 강제 변환하여 읽기
-const arrayBuffer = await response.arrayBuffer();
-const decoder = new TextDecoder('euc-kr');
-const text = decoder.decode(arrayBuffer);
-        const lines = text.split('\n');
-
-        let htmlContent = "";
-        let currentChapter = -1;
-
-     lines.forEach(line => {
-    // [설명] ^${abbr} : 약어로 시작
-    // (\\d+):(\\d+) : 장과 절 숫자 추출
-    // \\s+(.*) : 한 칸 띄고 그 뒤의 모든 내용(제목+본문) 추출
-    const regex = new RegExp(`^${abbr}(\\d+):(\\d+)\\s+(.*)`);
-    const match = line.trim().match(regex);
-    
-    if (match) {
-        const chapter = parseInt(match[1]); // 장
-        const verse = match[2];           // 절
-        let content = match[3];         // 제목 포함 본문 ("<천지 창조> 태초에...")
-
-        // 범위 내의 장인 경우에만 화면에 표시
-        if (chapter >= startCh && chapter <= endCh) {
-            // 장이 바뀔 때마다 제목 표시
-            if (currentChapter !== chapter) {
-                htmlContent += `<div class="chapter-head">${chapter}장</div>`;
-                currentChapter = chapter;
+        async function fetchBibleData(dateKey) {
+            const plan = planData[dateKey];
+            if (!plan) {
+                document.getElementById('header-title').innerText = "일정이 없습니다.";
+                return;
             }
+            document.getElementById('header-date').innerText = dateKey + " 통독 분량";
+            await renderBibleText(plan.book, plan.abbr, plan.start, plan.end);
+            updateUIState(dateKey);
+        }
+
+        async function loadManual() {
+            const b = document.getElementById('book-select');
+            const c = document.getElementById('chapter-select');
+            const book = b.value;
+            const ch = parseInt(c.value);
+            const abbr = b.options[b.selectedIndex].dataset.abbr;
+
+            if (!book || !ch) return alert("성경과 장을 선택하세요.");
             
-            // 본문 출력 (제목 <...> 이 있으면 강조하거나 그대로 출력)
-            htmlContent += `<p class="mb-3">
-                <span class="verse-num">${verse}</span>
-                <span class="bible-text">${content}</span>
-            </p>`;
-        }
-    }
-});
-
-        document.getElementById('bible-viewer').innerHTML = htmlContent || "본문 내용을 찾을 수 없습니다.";
-    } catch (e) {
-        document.getElementById('bible-viewer').innerHTML = 
-            `<p class='text-center text-red-400 py-10'>${bookName}.txt 파일을 불러올 수 없습니다.<br><span class='text-xs'>파일명과 경로를 확인해 주세요.</span></p>`;
-    }
-    updateStatusUI();
-    updateOverallProgress();
+            currentActiveDate = ""; // 수동 모드는 날짜 체크 해제
+            document.getElementById('header-date').innerText = "자유 읽기";
+            await renderBibleText(book, abbr, ch, ch);
+            updateUIState(null);
         }
 
-        // 3. UI 업데이트 및 상태 관리
-        function updateStatusUI() {
-            const todayKey = getTodayKey();
-            const isRead = localStorage.getItem(`read-${todayKey}`) === 'true';
-            const badge = document.getElementById('status-badge');
-            const btn = document.getElementById('check-btn');
+        // 3. 본문 렌더링 핵심 로직
+        async function renderBibleText(book, abbr, start, end) {
+            const viewer = document.getElementById('bible-viewer');
+            document.getElementById('header-title').innerText = `${book} ${start}${start==end?'':'-'+end}장`;
+            viewer.innerHTML = "<p class='text-center py-20 text-slate-400 animate-pulse'>불러오는 중...</p>";
+
+            try {
+                const res = await fetch(`./${book}.txt`);
+                if (!res.ok) throw new Error("File Missing");
+
+                // 기존: const text = await res.text(); (이 줄을 지우고 아래 3줄을 넣으세요)
+		const arrayBuffer = await res.arrayBuffer();
+		const decoder = new TextDecoder('euc-kr'); // 한국어 ANSI(EUC-KR) 전용 디코더
+		const text = decoder.decode(arrayBuffer);
+	console.log("파일 내용 첫 20글자:", text.substring(0, 20));
+                const lines = text.split(/\r?\n/);
+                let html = "";
+                let curCh = -1;
+                const regex = new RegExp(`^${abbr}\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)`);
+
+                lines.forEach(line => {
+                    const m = line.trim().match(regex);
+                    if (m) {
+                        const ch = parseInt(m[1]), vs = m[2], txt = m[3];
+                        if (ch >= start && ch <= end) {
+                            if (curCh !== ch) {
+                                html += `<div class="chapter-head">${ch}장</div>`;
+                                curCh = ch;
+                            }
+                            html += `<p class="mb-4"><span class="verse-num">${vs}</span>${txt}</p>`;
+                        }
+                    }
+                });
+                viewer.innerHTML = html || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
+                viewer.scrollTop = 0;
+            } catch (e) {
+                viewer.innerHTML = `<p class='text-red-500 text-center py-20'>${book}.txt 파일을 읽을 수 없습니다.</p>`;
+            }
+        }
+
+        // 4. UI 및 달력 로직
+        function toggleCalendar() {
+            const v = document.getElementById('calendar-view');
+            v.classList.toggle('hidden');
+            if (!v.classList.contains('hidden')) renderCalendar();
+        }
+
+        function renderCalendar() {
+            const month = document.getElementById('calendar-month').value;
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = "";
+            const lastDay = new Date(2026, parseInt(month), 0).getDate();
+
+            for (let d = 1; d <= lastDay; d++) {
+                const key = `${month}-${String(d).padStart(2, '0')}`;
+                const isRead = localStorage.getItem(`read-${key}`) === 'true';
+                const btn = document.createElement('button');
+                btn.innerText = d;
+                btn.className = `aspect-square text-xs rounded border ${isRead ? 'calendar-day read' : 'bg-white text-slate-400 border-slate-100'}`;
+                btn.onclick = () => { currentActiveDate = key; fetchBibleData(key); };
+                grid.appendChild(btn);
+            }
+        }
+
+        function toggleReadStatus() {
+            if (!currentActiveDate) return alert("통독 모드에서만 체크 가능합니다.");
+            const status = localStorage.getItem(`read-${currentActiveDate}`) === 'true';
+            localStorage.setItem(`read-${currentActiveDate}`, !status);
+            updateUIState(currentActiveDate);
+            renderCalendar();
+        }
+
+        function updateUIState(dateKey) {
+            const badge = document.getElementById('header-status');
+            const btn = document.getElementById('read-btn');
+            const isRead = dateKey && localStorage.getItem(`read-${dateKey}`) === 'true';
 
             if (isRead) {
                 badge.innerText = "읽음 완료";
                 badge.className = "px-2 py-0.5 rounded-full bg-green-500 text-white text-xs";
                 btn.innerText = "다시 읽기 (완료됨)";
-                btn.className = "w-full py-4 rounded-2xl font-bold text-white shadow-lg bg-green-600 mb-2";
+                btn.className = "w-full py-4 rounded-2xl font-bold text-white shadow-lg bg-green-600";
             } else {
-                badge.innerText = "미독";
+                badge.innerText = dateKey ? "미독" : "자유 모드";
                 badge.className = "px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs";
                 btn.innerText = "오늘의 읽기 완료";
-                btn.className = "w-full py-4 rounded-2xl font-bold text-white shadow-lg bg-blue-600 mb-2";
+                btn.className = "w-full py-4 rounded-2xl font-bold text-white shadow-lg bg-blue-600";
             }
-        }
-
-        function toggleRead() {
-            const todayKey = getTodayKey();
-            const isRead = localStorage.getItem(`read-${todayKey}`) === 'true';
-            localStorage.setItem(`read-${todayKey}`, !isRead);
-            updateStatusUI();
-            updateOverallProgress();
-        }
-
-        function updateOverallProgress() {
-            const totalDays = 365;
             let readCount = 0;
-            for (let i = 0; i < localStorage.length; i++) {
+            for (let i=0; i<localStorage.length; i++) {
                 if (localStorage.key(i).startsWith('read-') && localStorage.getItem(localStorage.key(i)) === 'true') readCount++;
             }
-            const percentage = Math.round((readCount / totalDays) * 100);
-            document.getElementById('progress-bar').style.width = `${percentage}%`;
-            document.getElementById('progress-text').innerText = `${percentage}% (${readCount}/${totalDays}일)`;
+            document.getElementById('header-progress').style.width = (readCount / 365 * 100) + "%";
         }
 
-        function resetData() {
-            if (confirm("모든 통독 기록을 초기화하시겠습니까?")) {
-                Object.keys(localStorage).forEach(key => { if(key.startsWith('read-')) localStorage.removeItem(key); });
-                location.reload();
-            }
+        function updateChapterList() {
+            const b = document.getElementById('book-select');
+            const c = document.getElementById('chapter-select');
+            const max = b.options[b.selectedIndex].dataset.max;
+            c.innerHTML = '<option value="">장</option>';
+            if (max) for (let i = 1; i <= max; i++) c.innerHTML += `<option value="${i}">${i}장</option>`;
         }
+	let currentFontSize = 18; // 기본 크기
 
-        window.onload = loadBibleContent;
+function changeFontSize(delta) {
+    currentFontSize += delta;
+    // 최소 14px, 최대 30px로 제한
+    if (currentFontSize < 14) currentFontSize = 14;
+    if (currentFontSize > 30) currentFontSize = 30;
+    
+    document.getElementById('bible-viewer').style.fontSize = currentFontSize + 'px';
+    // 설정 저장 (나중에도 유지되도록)
+    localStorage.setItem('bible-font-size', currentFontSize);
+}
+
+// 페이지 로드 시 저장된 크기 불러오기 (window.onload 안에 추가)
+const savedSize = localStorage.getItem('bible-font-size');
+if (savedSize) {
+    currentFontSize = parseInt(savedSize);
+    document.getElementById('bible-viewer').style.fontSize = currentFontSize + 'px';
+}
     </script>
 </body>
-</html>
