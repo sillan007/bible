@@ -613,7 +613,7 @@ function loadToday() {
             updateUIState(null);
         }
 
-// 3. 본문 렌더링 핵심 로직 (이 함수 전체를 찾아서 그대로 덮어쓰세요)
+/// 3. 본문 렌더링 핵심 로직 (이 함수 전체를 찾아서 그대로 덮어쓰세요)
 async function renderBibleText(book, abbr, start, end) {
     const viewer = document.getElementById('bible-viewer');
     
@@ -680,7 +680,7 @@ async function renderBibleText(book, abbr, start, end) {
             lines.forEach(function(line) {
                 const m = line.trim().match(regex);
                 if (m) {
-                    // ⭐ [문법 누락 방지 수정] 대괄호 인덱스를 명확하게 지정하여 문자열을 정상 추출합니다!
+                    // ⭐ [글자 삭제 오류 완벽 우회] 변수명 뒤에 대괄호와 숫자를 안전하게 명시했습니다!
                     const ch = parseInt(m[1]); 
                     const vs = m[2]; 
                     const txt = m[3];
@@ -706,9 +706,6 @@ async function renderBibleText(book, abbr, start, end) {
         viewer.innerHTML = "<p class='text-red-500 text-center py-20'>성경 파일을 읽는 도중 오류가 발생했습니다.</p>";
     }
 }
-
-
-
 
         // 4. UI 및 달력 로직
         function toggleCalendar() {
