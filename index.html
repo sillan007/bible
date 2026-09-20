@@ -570,8 +570,9 @@ function loadToday() {
         
         viewer.innerHTML = htmlContent;
         
-        // 4. 하단 읽기 완료 버튼 상태 동기화
-        const isRead = readHistory ? !!readHistory[currentActiveDate] : false;
+         // 4. 하단 읽기 완료 버튼 상태 동기화
+        // 💡 readHistory 변수가 정의되어 있는지 안전하게 체크(typeof)하여 에러를 방지합니다.
+        const isRead = (typeof readHistory !== 'undefined' && readHistory) ? !!readHistory[currentActiveDate] : false;
         updateButtonState(isRead);
     } else {
         // 💡 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
