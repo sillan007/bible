@@ -543,22 +543,22 @@ function loadToday() {
     currentActiveDate = dateKey;
     const viewer = document.getElementById("bible-viewer");
     
-    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인 (undefined 방지)
+    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인
     if (planData && planData[dateKey]) {
         let rawData = planData[dateKey];
         let plansArray = [];
 
-        // 데이터가 배열([ ])이 아니라 단일 객체({ }) 한 줄 형식이면 배열로 감싸줍니다.
+        // 데이터가 배열이 아니면 배열로 감싸고, 배열이면 그대로 사용하여 원본 보존
         if (!Array.isArray(rawData)) {
-            plansArray = [rawData]; // 한 줄 데이터 호환성 확보
+            plansArray = [rawData]; 
         } else {
-            plansArray = rawData;   // 두 줄 이상 데이터 그대로 사용 ([오바댜, 요나])
+            plansArray = rawData;   
         }
         
         // 2. 본문 뷰어 타이틀 생성
         let htmlContent = `<h2 class="text-xl font-bold text-blue-600 mb-4">📅 오늘의 통독 범위 (${dateKey})</h2>`;
         
-        // 3. 한 줄이든 두 줄이든 무조건 반복문(forEach)을 에러 없이 돌며 화면을 그려줍니다.
+        // 3. 한 줄이든 두 줄이든 무조건 반복문을 돌며 화면 목록을 정상적으로 그려줍니다.
         plansArray.forEach(plan => {
             htmlContent += `
                 <div class="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -570,24 +570,15 @@ function loadToday() {
         
         viewer.innerHTML = htmlContent;
 
-        // ⭕ [핵심 추가: 본문 렌더링 함수와 완벽 연동]
-        // 하루 읽을 성경 분량이 여러 권(배열)일 때, 본문 로더(renderBibleText)가 에러 없이 작동하도록
-        // 성경 이름, 약어, 시작장, 끝장 정보를 콤마(,)로 정확하게 묶어서 전달합니다.
+        // 💡 [핵심 연동] 배열 전체를 온전하게 본문 렌더링 함수로 바로 전달합니다.
         if (plansArray.length > 0) {
-            let combinedBook = plansArray.map(p => p.book).join(', '); // "오바댜, 요나"
-            let combinedAbbr = plansArray.map(p => p.abbr).join(', '); // "옵, 욘"
-            let combinedStart = plansArray[0].start;                   // 첫 성경 시작장
-            let combinedEnd = plansArray[plansArray.length - 1].end;   // 마지막 성경 끝장
-            
-            // 기존 본문 로딩 함수 호출!
-            renderBibleText(combinedBook, combinedAbbr, combinedStart, combinedEnd);
+            renderBibleText(plansArray, "", 0, 0);
         }
         
         // 4. 하단 읽기 완료 버튼 상태 동기화
         const isRead = (typeof readHistory !== 'undefined' && readHistory) ? !!readHistory[currentActiveDate] : false;
         updateButtonState(isRead);
     } else {
-        // 💡 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
         viewer.innerHTML = `
             <div class="text-center text-slate-400 mt-10">
                 <p class="font-bold text-slate-600 text-base">📅 오늘의 통독 계획이 없습니다.</p>
