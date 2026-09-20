@@ -524,15 +524,40 @@
 
         let currentActiveDate = ""; // 현재 보고 있는 통독 날짜 키
 
-        // 2. 초기 로드
-        window.onload = function() {
-            const now = new Date();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            document.getElementById('calendar-month').value = month;
-            loadToday();
-        };
+       // 2. 초기 로드 (이 구역을 찾아서 아래 코드로 통째로 바꾸세요)
+window.onload = function() {
+    
+    // ==================================================================
+    // ⭐ [원본 수정 없는 배열 에러 원천 차단 장치]
+    // 달력, 장 선택, 본문 시스템이 09-19 배열을 만나도 절대 깨지지 않게 실시간 포장합니다.
+    // ==================================================================
+    if (typeof planData !== 'undefined' && planData) {
+        for (let dateKey in planData) {
+            // 해당 날짜의 데이터가 배열([ ]) 형태로 들어있다면? (예: 09-19)
+            if (Array.isArray(planData[dateKey])) {
+                const arr = planData[dateKey];
+                
+                // 기존 시스템(달력, 장, 본문)이 에러 없이 완벽하게 읽을 수 있는 한 줄 양식으로 실시간 매핑
+                planData[dateKey] = {
+                    book: arr.map(function(p) { return p.book; }).join(', '),   // "오바댜, 요나"
+                    abbr: arr.map(function(p) { return p.abbr; }).join(', '),   // "옵, 욘"
+                    start: arr[0] ? arr[0].start : 1,                            // 첫 성경 시작장
+                    end: arr[arr.length - 1] ? arr[arr.length - 1].end : 1       // 마지막 성경 끝장
+                };
+            }
+        }
+    }
+    // ==================================================================
 
-// [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
+    // 3. 기존 프로그램 로직 (원래 원본 코드 구조 그대로 유지됩니다)
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    document.getElementById('calendar-month').value = month;
+    loadToday();
+};
+
+
+       // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
 function loadToday() {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -542,24 +567,23 @@ function loadToday() {
     currentActiveDate = dateKey;
     const viewer = document.getElementById("bible-viewer");
     
-    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인
+    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인 (undefined 방지)
     if (planData && planData[dateKey]) {
         let rawData = planData[dateKey];
         let plansArray = [];
 
-        // 💡 [배열 데이터 우회 처리]
-        // 09-19처럼 배열이 들어오면, 원본은 두고 기존 프로그램이 인식할 수 있게 첫 번째 성경(오바댜)으로 강제 전환합니다.
-        if (Array.isArray(rawData)) {
-            plansArray = [rawData[0]]; // 첫 번째 성경(오바댜)을 배열에 담음
-            rawData = rawData[0];      // 기존 하위 프로그램들이 읽을 수 있게 한 줄 객체로 변환
+        // 💡 [핵심 에러 해결 코드] 
+        // 데이터가 배열([ ])이 아니라 단일 객체({ }) 한 줄 형식이면 컴퓨터가 스스로 판단하여 배열로 감싸줍니다.
+        if (!Array.isArray(rawData)) {
+            plansArray = [rawData]; // 한 줄 데이터 호환성 확보
         } else {
-            plansArray = [rawData];    // 01-01 처럼 한 줄 데이터인 경우 기존과 동일
+            plansArray = rawData;   // 두 줄 이상 데이터 그대로 사용
         }
         
         // 2. 본문 뷰어 타이틀 생성
         let htmlContent = `<h2 class="text-xl font-bold text-blue-600 mb-4">📅 오늘의 통독 범위 (${dateKey})</h2>`;
         
-        // 3. 한 줄이든 두 줄이든 무조건 반복문을 돌며 화면을 그려줍니다.
+        // 3. 한 줄이든 두 줄이든 무조건 반복문(forEach)을 에러 없이 돌며 화면을 그려줍니다.
         plansArray.forEach(plan => {
             htmlContent += `
                 <div class="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -571,15 +595,11 @@ function loadToday() {
         
         viewer.innerHTML = htmlContent;
         
-        // 💡 [핵심 연동] 기존 원본 프로그램이 가지고 있던 본문 읽기 함수(renderBibleText)를 그대로 실행시킵니다.
-        if (typeof renderBibleText === 'function') {
-            renderBibleText(rawData.book, rawData.abbr, rawData.start, rawData.end);
-        }
-        
         // 4. 하단 읽기 완료 버튼 상태 동기화
-        const isRead = (typeof readHistory !== 'undefined' && readHistory) ? !!readHistory[currentActiveDate] : false;
+        const isRead = readHistory ? !!readHistory[currentActiveDate] : false;
         updateButtonState(isRead);
     } else {
+        // 💡 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
         viewer.innerHTML = `
             <div class="text-center text-slate-400 mt-10">
                 <p class="font-bold text-slate-600 text-base">📅 오늘의 통독 계획이 없습니다.</p>
@@ -589,6 +609,7 @@ function loadToday() {
         updateButtonState(false);
     }
 }
+
 
         async function fetchBibleData(dateKey) {
             const plan = planData[dateKey];
