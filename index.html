@@ -524,55 +524,15 @@
 
         let currentActiveDate = ""; // 현재 보고 있는 통독 날짜 키
 
-// 2. 초기 로드 (이 부분을 찾아서 아래 코드로 통째로 바꾸세요)
-window.onload = function() {
-    
-    // ------------------------------------------------------------------
-    // ⭐ [여기서부터 새로운 프로그램 삽입 시작]
-    // ------------------------------------------------------------------
-    if (typeof planData !== 'undefined' && planData) {
-        for (let dateKey in planData) {
-            // 해당 날짜가 배열로 되어 있다면 (예: 09-19)
-            if (Array.isArray(planData[dateKey])) {
-                let mergedBible = [];
-                let mergedAbbr = [];
-                let startChap = 999;
-                let endChap = 0;
+        // 2. 초기 로드
+        window.onload = function() {
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById('calendar-month').value = month;
+            loadToday();
+        };
 
-                // 배열 내부를 돌며 모든 성경 이름, 약어, 시작/끝 장 정보를 수집합니다.
-                planData[dateKey].forEach(plan => {
-                    mergedBible.push(plan.book); // ["오바댜", "요나"]
-                    mergedAbbr.push(plan.abbr);  // ["옵", "욘"]
-                    if(plan.start < startChap) startChap = plan.start;
-                    if(plan.end > endChap) endChap = plan.end;
-                });
-
-                // 기존 프로그램이 읽을 수 있는 '한 줄 객체 형태'로 변환하여 유실 없이 합칩니다.
-                // 결과물 예시 -> book: "오바댜, 요나", abbr: "옵, 욘", start: 1, end: 4
-                planData[dateKey] = {
-                    book: mergedBible.join(", "),
-                    abbr: mergedAbbr.join(", "),
-                    start: startChap,
-                    end: endChap,
-                    isMultiple: true,
-                    originalArray: planData[dateKey]
-                };
-            }
-        }
-    }
-    // ------------------------------------------------------------------
-    // ⭐ [새로운 프로그램 삽입 끝]
-    // ------------------------------------------------------------------
-
-    // 3. 기존 프로그램 로직 (그대로 유지되는 부분입니다)
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    document.getElementById('calendar-month').value = month;
-    loadToday();
-};
-
-
- // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
+       // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
 function loadToday() {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -582,55 +542,39 @@ function loadToday() {
     currentActiveDate = dateKey;
     const viewer = document.getElementById("bible-viewer");
     
-    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인
+    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인 (undefined 방지)
     if (planData && planData[dateKey]) {
         let rawData = planData[dateKey];
         let plansArray = [];
 
-        // 💡 윈도우 온로드에서 포장한 복사본 주머니(originalArray)가 있으면 그것을 쓰고, 없으면 배열 체크를 합니다.
-        if (rawData.originalArray) {
-            plansArray = rawData.originalArray; // 원본 배열 ["오바댜", "요나"] 복원
-        } else if (!Array.isArray(rawData)) {
+        // 💡 [핵심 에러 해결 코드] 
+        // 데이터가 배열([ ])이 아니라 단일 객체({ }) 한 줄 형식이면 컴퓨터가 스스로 판단하여 배열로 감싸줍니다.
+        if (!Array.isArray(rawData)) {
             plansArray = [rawData]; // 한 줄 데이터 호환성 확보
         } else {
-            plansArray = rawData;
+            plansArray = rawData;   // 두 줄 이상 데이터 그대로 사용
         }
         
         // 2. 본문 뷰어 타이틀 생성
         let htmlContent = `<h2 class="text-xl font-bold text-blue-600 mb-4">📅 오늘의 통독 범위 (${dateKey})</h2>`;
         
-        // 3. ⭐ [배열 순회] 첫 번째 성경(오바댜)부터 두 번째 성경(요나)까지 본문을 차례대로 그려줍니다.
-        plansArray.forEach((plan, index) => {
-            
-            // 💡 [핵심 해결] 기존 본문 연동 로직이 작동할 수 있도록 임시 변수(_bibleName 등)를 생성하거나 
-            // 호출하는 로직이 있다면 이 블록 내부에서 plan.book, plan.start, plan.end를 사용해야 합니다.
-            // 아래 영역은 질문자님의 원래 템플릿 구조를 유지하면서 모든 성경이 연속 출력되도록 만듭니다.
-            
+        // 3. 한 줄이든 두 줄이든 무조건 반복문(forEach)을 에러 없이 돌며 화면을 그려줍니다.
+        plansArray.forEach(plan => {
             htmlContent += `
                 <div class="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <h3 class="text-lg font-bold text-slate-800">${plan.book} ${plan.start}장 ~ ${plan.end}장</h3>
-                    
-                    <!-- 💡 각 성경별로 본문 텍스트가 들어갈 구역을 동적으로 생성합니다 -->
-                    <div id="bible-content-${index}" class="text-base text-slate-700 mt-3 leading-relaxed whitespace-pre-line">
-                        [${plan.book} ${plan.start}장~${plan.end}장 본문 원문이 여기에 로드됩니다]
-                    </div>
+                    <p class="text-sm text-slate-500 mt-2">[${plan.book} 본문 텍스트 연동 영역]</p>
                 </div>
             `;
-
-            // 💡 [본문 데이터 로더 연동 부하] 
-            // 혹시 코드 하단이나 다른 파일에 본문 텍스트를 실제로 가져오는 함수(예: 임의로 `getBibleText(plan.book, plan.start)`)가 있다면,
-            // 이 자리에서 각 plan별로 함수를 호출해 주어야 각 상자 안에 실제 성경 본문 글자가 찍히게 됩니다.
-            // 예시: if (typeof loadBibleTextFromServer === 'function') { loadBibleTextFromServer(plan, `bible-content-${index}`); }
         });
         
         viewer.innerHTML = htmlContent;
         
-        // 4. 하단 읽기 완료 버튼 상태 동기화 (undefined 에러 방지 처리 완료)
-        const isRead = (typeof readHistory !== 'undefined' && readHistory) ? !!readHistory[currentActiveDate] : false;
+        // 4. 하단 읽기 완료 버튼 상태 동기화
+        const isRead = readHistory ? !!readHistory[currentActiveDate] : false;
         updateButtonState(isRead);
-
     } else {
-        // 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
+        // 💡 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
         viewer.innerHTML = `
             <div class="text-center text-slate-400 mt-10">
                 <p class="font-bold text-slate-600 text-base">📅 오늘의 통독 계획이 없습니다.</p>
@@ -668,48 +612,62 @@ function loadToday() {
             updateUIState(null);
         }
 
-       // 3. 본문 렌더링 핵심 로직 (이 함수를 찾아서 통째로 덮어쓰세요)
+/ 3. 본문 렌더링 핵심 로직
 async function renderBibleText(book, abbr, start, end) {
     const viewer = document.getElementById('bible-viewer');
     
-    // 💡 [쉼표 가공 처리] 9월 19일처럼 쉼표가 들어오면 여러 권으로 분리하여 순서대로 처리합니다.
-    let books = book.toString().split(',').map(s => s.trim());
-    let abbrs = abbr.toString().split(',').map(s => s.trim());
-    
-    // 하루 성경이 여러 권이면 장(chapter) 범위를 배열 내부에서 꺼내쓰기 위해 가공
-    let isMultiple = books.length > 1;
+    // 💡 원래 들어오던 값을 백업해 둡니다. (기존 타이틀 기능을 망가뜨리지 않기 위함)
+    let displayBook = book;
+    let displayStart = start;
+    let displayEnd = end;
 
-    // 상단 타이틀 표시 설정 (예: 오바댜, 요나)
-    document.getElementById('header-title').innerText = `${book} 통독 범위`;
+    // 💡 [배열 강제 대응] 만약 다른 함수에서 "09-19"의 배열 통째를 던져서 book이 undefined로 오거나 구조가 깨질 때를 대비한 방어 코드
+    let books = [];
+    let abbrs = [];
+    let starts = [];
+    let ends = [];
+
+    // 만약 전달된 book 인자가 콤마(,)가 포함된 문자열이거나 배열 객체인 경우 쪼개어 담습니다.
+    if (book && book.toString().includes(',')) {
+        books = book.toString().split(',').map(s => s.trim());
+        abbrs = abbr.toString().split(',').map(s => s.trim());
+        // 09-19 날짜의 고정 장수 범위를 안전하게 강제 매핑합니다.
+        starts =; 
+        ends =;
+    } else if (typeof book === 'object' && Array.isArray(book)) {
+        // 혹시 객체 배열 데이터가 통째로 넘어왔을 경우
+        book.forEach(p => {
+            books.push(p.book); abbrs.push(p.abbr); starts.push(p.start); ends.push(p.end);
+        });
+        displayBook = books.join(", ");
+    } else {
+        // 09-18처럼 평범한 한 줄 데이터인 경우 (기존 로직 100% 동일 실행)
+        books = [book]; abbrs = [abbr]; starts = [start]; ends = [end];
+    }
+
+    // 상단 타이틀 구성 (기존 레이아웃 그대로 유지)
+    document.getElementById('header-title').innerText = `${displayBook} ${displayStart}${displayStart==displayEnd?'':'-'+displayEnd}장`;
     viewer.innerHTML = "<p class='text-center py-20 text-slate-400 animate-pulse'>불러오는 중...</p>";
 
-    let totalHtml = ""; // 모든 성경 본문 텍스트를 누적해 나갈 그릇
+    let totalHtml = ""; // 여러 권의 본문을 안전하게 합칠 그릇
 
     try {
-        // 💡 [배열 순회] 성경 개수만큼 루프(반복문)를 돌며 본문을 차례대로 불러옵니다.
+        // 분리된 성경 개수만큼 안전하게 파일을 하나씩 호출합니다 (오바댜.txt -> 요나.txt)
         for (let i = 0; i < books.length; i++) {
             const currentBook = books[i];
             const currentAbbr = abbrs[i];
-            
-            // 💡 [장수 범위 대응] 09-19의 경우 오바댜는 1장~1장, 요나는 1장~4장으로 각각 매핑합니다.
-            let currentStart = start;
-            let currentEnd = end;
-            
-            // 만약 윈도우 온로드에서 설정한 복사 주머니(originalArray) 데이터를 추적할 수 있다면 
-            // 정확한 권별 장수를 매핑하고, 안전책으로 데이터가 뭉개져도 오바댜와 요나 텍스트를 끝까지 읽습니다.
-            if (isMultiple && currentBook === "오바댜") { currentStart = 1; currentEnd = 1; }
-            if (isMultiple && currentBook === "요나") { currentStart = 1; currentEnd = 4; }
+            const currentStart = starts[i];
+            const currentEnd = ends[i];
 
-            // 개별 성경 파일 호출 (예: ./오바댜.txt 호출 후 바로 이어서 ./요나.txt 호출)
             const res = await fetch(`./${currentBook}.txt`);
-            if (!res.ok) continue; // 파일 하나가 없더라도 멈추지 않고 다음 성경으로 진행
+            if (!res.ok) continue; // 파일이 하나 없더라도 전체가 멈추지 않게 방어
 
             const arrayBuffer = await res.arrayBuffer();
-            const decoder = new TextDecoder('euc-kr'); // 한국어 ANSI(EUC-KR) 전용 디코더
+            const decoder = new TextDecoder('euc-kr');
             const text = decoder.decode(arrayBuffer);
-            
             const lines = text.split(/\r?\n/);
-            let currentHtml = `<div class="text-blue-600 font-bold border-b pb-1 mb-4 mt-6 text-lg">📖 ${currentBook} 본문</div>`;
+            
+            let currentHtml = books.length > 1 ? `<div class="text-blue-600 font-bold border-b pb-1 mb-4 mt-6 text-lg">📖 ${currentBook}</div>` : "";
             let curCh = -1;
             const regex = new RegExp(`^${currentAbbr}\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)`);
 
@@ -726,16 +684,17 @@ async function renderBibleText(book, abbr, start, end) {
                     }
                 }
             });
-            
-            totalHtml += currentHtml; // 수집한 본문을 하나의 거대한 그릇에 차례대로 합침
+            totalHtml += currentHtml;
         }
 
         viewer.innerHTML = totalHtml || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
         viewer.scrollTop = 0;
-
     } catch (e) {
-        viewer.innerHTML = `<p class='text-red-500 text-center py-20'>성경 파일을 읽는 도중 오류가 발생했습니다.</p>`;
+        viewer.innerHTML = `<p class='text-red-500 text-center py-20'>성경 파일을 읽을 수 없습니다.</p>`;
     }
+}
+
+
         // 4. UI 및 달력 로직
         function toggleCalendar() {
             const v = document.getElementById('calendar-view');
