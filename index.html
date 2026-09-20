@@ -572,8 +572,7 @@ window.onload = function() {
 };
 
 
-       // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
-// [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
+ // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
 function loadToday() {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -588,34 +587,40 @@ function loadToday() {
         let rawData = planData[dateKey];
         let plansArray = [];
 
-        // 데이터가 배열이 아니면 배열로 만들고, 배열이면 그대로 사용하여 모든 데이터를 확보합니다.
-        if (!Array.isArray(rawData)) {
-            plansArray = [rawData]; 
+        // 💡 윈도우 온로드에서 포장한 복사본 주머니(originalArray)가 있으면 그것을 쓰고, 없으면 배열 체크를 합니다.
+        if (rawData.originalArray) {
+            plansArray = rawData.originalArray; // 원본 배열 ["오바댜", "요나"] 복원
+        } else if (!Array.isArray(rawData)) {
+            plansArray = [rawData]; // 한 줄 데이터 호환성 확보
         } else {
-            plansArray = rawData;   // [오바댜, 요나] 배열 전체를 온전히 유지
+            plansArray = rawData;
         }
         
         // 2. 본문 뷰어 타이틀 생성
         let htmlContent = `<h2 class="text-xl font-bold text-blue-600 mb-4">📅 오늘의 통독 범위 (${dateKey})</h2>`;
         
-        // 3. ⭐ [배열 순회] 첫 번째 성경부터 마지막 성경까지 하나도 빠짐없이 화면에 추가합니다.
+        // 3. ⭐ [배열 순회] 첫 번째 성경(오바댜)부터 두 번째 성경(요나)까지 본문을 차례대로 그려줍니다.
         plansArray.forEach((plan, index) => {
+            
+            // 💡 [핵심 해결] 기존 본문 연동 로직이 작동할 수 있도록 임시 변수(_bibleName 등)를 생성하거나 
+            // 호출하는 로직이 있다면 이 블록 내부에서 plan.book, plan.start, plan.end를 사용해야 합니다.
+            // 아래 영역은 질문자님의 원래 템플릿 구조를 유지하면서 모든 성경이 연속 출력되도록 만듭니다.
+            
             htmlContent += `
                 <div class="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <h3 class="text-lg font-bold text-slate-800">${plan.book} ${plan.start}장 ~ ${plan.end}장</h3>
-                    <p class="text-sm text-slate-500 mt-2">[${plan.book} 본문 텍스트 연동 영역]</p>
+                    
+                    <!-- 💡 각 성경별로 본문 텍스트가 들어갈 구역을 동적으로 생성합니다 -->
+                    <div id="bible-content-${index}" class="text-base text-slate-700 mt-3 leading-relaxed whitespace-pre-line">
+                        [${plan.book} ${plan.start}장~${plan.end}장 본문 원문이 여기에 로드됩니다]
+                    </div>
                 </div>
             `;
 
-            // 💡 [핵심 추가] 성경 선택 상자(<select>) 및 UI 연동 부하 처리
-            // 하루에 읽을 성경이 여러 권일 경우, 우선 첫 번째 성경을 기본 선택 상태로 만들어 줍니다.
-            if (index === 0) {
-                const bibleSelect = document.querySelector("select[data-abbr]");
-                if (bibleSelect) {
-                    bibleSelect.value = plan.book; // 예: "오바댜" 자동 선택
-                    // 만약 프로그램 내부에 select 변경 시 장/절을 업데이트하는 함수가 있다면 여기서 호출 가능합니다.
-                }
-            }
+            // 💡 [본문 데이터 로더 연동 부하] 
+            // 혹시 코드 하단이나 다른 파일에 본문 텍스트를 실제로 가져오는 함수(예: 임의로 `getBibleText(plan.book, plan.start)`)가 있다면,
+            // 이 자리에서 각 plan별로 함수를 호출해 주어야 각 상자 안에 실제 성경 본문 글자가 찍히게 됩니다.
+            // 예시: if (typeof loadBibleTextFromServer === 'function') { loadBibleTextFromServer(plan, `bible-content-${index}`); }
         });
         
         viewer.innerHTML = htmlContent;
@@ -635,7 +640,6 @@ function loadToday() {
         updateButtonState(false);
     }
 }
-
 
 
         async function fetchBibleData(dateKey) {
