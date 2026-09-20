@@ -524,59 +524,13 @@
 
         let currentActiveDate = ""; // 현재 보고 있는 통독 날짜 키
 
-       // 2. 초기 로드 (이 구역을 찾아서 아래 코드로 통째로 바꾸세요)
-// 2. 초기 로드 (이 구역을 찾아서 아래 코드로 완전히 교체하세요)
-window.onload = function() {
-    
-    // ==================================================================
-    // ⭐ [가짜 네트워크 중계기 - Fetch Hooking 암호장치]
-    // 프로그램 내부의 그 어떤 숨은 코드가 "오바댜, 요나.txt"를 마음대로 요청하더라도
-    // 네트워크 레벨에서 강제로 가로채어 개별 파일로 분리한 뒤 합쳐서 돌려줍니다.
-    // ==================================================================
-    const originalFetch = window.fetch;
-    window.fetch = async function(...args) {
-        let url = args[0];
-        
-        // 요청한 파일명 주소에 쉼표(,)가 포함되어 있다면 (예: . / 오바댜, 요나.txt)
-        if (typeof url === 'string' && url.includes(',') && url.endsWith('.txt')) {
-            try {
-                // 1. 주소에서 순수한 성경 이름들만 분리해냅니다 (["오바댜", "요나"])
-                let cleanPath = url.replace('./', '');
-                let bookNames = cleanPath.replace('.txt', '').split(',').map(s => s.trim());
-                
-                let mergedText = ""; // 쪼개서 읽어온 본문들을 하나로 합칠 그릇
-                
-                // 2. 쪼개진 성경 이름대로 파일 복수 호출 (오바댜.txt -> 요나.txt)
-                for (let book of bookNames) {
-                    const res = await originalFetch(`./${book}.txt`, args[1]);
-                    if (res.ok) {
-                        const arrayBuffer = await res.arrayBuffer();
-                        const decoder = new TextDecoder('euc-kr'); // 한국어 인코딩 디코딩
-                        const text = decoder.decode(arrayBuffer);
-                        mergedText += `\n[📖 ${book} 본문]\n` + text; // 가독성을 위해 중간 제목 삽입
-                    }
-                }
-                
-                // 3. 기존 프로그램이 마치 원래 하나의 파일이었던 것처럼 속아서 읽도록 Response 객체로 포장해 반환합니다.
-                return new Response(mergedText, {
-                    status: 200,
-                    headers: { 'Content-Type': 'text/plain; charset=euc-kr' }
-                });
-            } catch (e) {
-                console.error("네트워크 가로채기 에러:", e);
-            }
-        }
-        // 평범한 단일 성경 파일(09-18 등)은 기존 네트워크 요청 그대로 흘려보냅니다.
-        return originalFetch(...args);
-    };
-    // ==================================================================
-
-    // 3. 기존 프로그램의 순수 로직 (원래 원본 코드 그대로 유지되는 구역입니다)
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    document.getElementById('calendar-month').value = month;
-    loadToday();
-};
+  // 2. 초기 로드
+        window.onload = function() {
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById('calendar-month').value = month;
+            loadToday();
+        };
 
 
        // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
@@ -659,11 +613,10 @@ function loadToday() {
             updateUIState(null);
         }
 
- // 3. 본문 렌더링 핵심 로직 (이 함수 전체를 찾아서 그대로 덮어쓰세요)
+// 3. 본문 렌더링 핵심 로직 (이 함수 전체를 찾아서 그대로 덮어쓰세요)
 async function renderBibleText(book, abbr, start, end) {
     const viewer = document.getElementById('bible-viewer');
     
-    // 💡 1. 상위 호출부에서 변수가 정상적으로 전달되지 않았을 경우를 대비한 방어 코드
     if (!book) {
         viewer.innerHTML = "<p class='text-center py-20 text-slate-400'>선택된 성경 데이터가 올바르지 않습니다.</p>";
         return;
@@ -674,12 +627,11 @@ async function renderBibleText(book, abbr, start, end) {
     let starts = [];
     let ends = [];
 
-    // 💡 2. 데이터에 쉼표(,)가 포함되어 여러 권이 들어온 경우 깔끔하게 쪼개어 배열에 담습니다.
+    // 데이터에 쉼표(,)가 포함되어 여러 권이 들어온 경우 깔끔하게 쪼개어 배열에 담습니다.
     if (book.toString().includes(',')) {
         books = book.toString().split(',').map(function(s) { return s.trim(); });
         abbrs = abbr.toString().split(',').map(function(s) { return s.trim(); });
         
-        // 날짜별 여러 권(09-19 등)인 경우 성경 이름에 맞춰 시작장과 끝장을 개별 강제 매핑합니다.
         books.forEach(function(b) {
             if (b === "오바댜") { starts.push(1); ends.push(1); }
             else if (b === "요나") { starts.push(1); ends.push(4); }
@@ -687,14 +639,13 @@ async function renderBibleText(book, abbr, start, end) {
             else { starts.push(Number(start) || 1); ends.push(Number(end) || 1); }
         });
     } else {
-        // 평범한 단일 날짜(09-18 등)는 기존 로직을 100% 똑같이 따릅니다.
         books = [book];
         abbrs = [abbr];
         starts = [Number(start)];
         ends = [Number(end)];
     }
 
-    // ⭕ 상단 제목 표시 설정 (기존 프로그램의 장/절 표시 규칙을 완벽하게 유지합니다)
+    // 상단 제목 표시 설정 (기존 프로그램의 장/절 표시 규칙 유지)
     let titleText = "";
     if (books.length > 1) {
         titleText = book + " 통독 범위";
@@ -707,34 +658,33 @@ async function renderBibleText(book, abbr, start, end) {
     let totalHtml = ""; 
 
     try {
-        // 💡 3. 분리된 성경 개수만큼 순서대로 반복문을 돌며 파일을 정확하게 호출합니다.
         for (let i = 0; i < books.length; i++) {
             const currentBook = books[i];
             const currentAbbr = abbrs[i];
             const currentStart = starts[i];
             const currentEnd = ends[i];
 
-            // 정확하게 하나의 존재 파일(./미가.txt 등)만 깔끔하게 호출합니다.
             const res = await fetch("./" + currentBook + ".txt");
             if (!res.ok) continue; 
 
             const arrayBuffer = await res.arrayBuffer();
-            const decoder = new TextDecoder('euc-kr'); // 한국어 인코딩 전용 디코더
+            const decoder = new TextDecoder('euc-kr');
             const text = decoder.decode(arrayBuffer);
             const lines = text.split(/\r?\n/);
             
-            // 여러 권일 때는 본문 상단에 성경 이름을 소제목으로 달아줍니다.
             let currentHtml = books.length > 1 ? '<div class="text-blue-600 font-bold border-b pb-1 mb-4 mt-6 text-lg">📖 ' + currentBook + ' (' + currentStart + '~' + currentEnd + '장)</div>' : "";
             let curCh = -1;
             
-            // ⭕ 정규식 매핑 방식을 질문자님의 원본 규칙대로 완벽하게 복원합니다.
             const regex = new RegExp("^" + currentAbbr + "\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)");
 
             lines.forEach(function(line) {
                 const m = line.trim().match(regex);
                 if (m) {
-                    // ⭕ [핵심 버그 해결] 대괄호 인덱스, [2], [3]을 명확히 명시하여 장/절/본문을 온전히 솎아냅니다!
-                    const ch = parseInt(m[1]), vs = m[2], txt = m[3];
+                    // ⭐ [문법 누락 방지 수정] 대괄호 인덱스를 명확하게 지정하여 문자열을 정상 추출합니다!
+                    const ch = parseInt(m[1]); 
+                    const vs = m[2]; 
+                    const txt = m[3];
+                    
                     if (ch >= currentStart && ch <= currentEnd) {
                         if (curCh !== ch) {
                             currentHtml += '<div class="chapter-head">' + ch + '장</div>';
@@ -748,7 +698,6 @@ async function renderBibleText(book, abbr, start, end) {
             totalHtml += currentHtml; 
         }
 
-        // 💡 4. 최종 합쳐진 HTML 결과물을 뷰어 창에 완벽히 뿌려줍니다.
         viewer.innerHTML = totalHtml || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
         viewer.scrollTop = 0;
         
@@ -757,6 +706,7 @@ async function renderBibleText(book, abbr, start, end) {
         viewer.innerHTML = "<p class='text-red-500 text-center py-20'>성경 파일을 읽는 도중 오류가 발생했습니다.</p>";
     }
 }
+
 
 
 
