@@ -524,25 +524,53 @@
 
         let currentActiveDate = ""; // 현재 보고 있는 통독 날짜 키
 
-      // 2. 초기 로드
+// 2. 초기 로드 (이 부분을 찾아서 아래 코드로 통째로 바꾸세요)
 window.onload = function() {
     
-    // ⭐ [여기서부터 복사] 365일 일독표 데이터 자동 변환기 (배열 에러 원천 차단)
+    // ------------------------------------------------------------------
+    // ⭐ [여기서부터 새로운 프로그램 삽입 시작]
+    // ------------------------------------------------------------------
     if (typeof planData !== 'undefined' && planData) {
         for (let dateKey in planData) {
-            // 해당 날짜의 데이터가 배열([ ]) 형태로 들어있다면?
+            // 해당 날짜가 배열로 되어 있다면 (예: 09-19)
             if (Array.isArray(planData[dateKey])) {
-                // 첫 번째 성경 데이터(0번째)를 꺼내서 강제로 원래 형식({ })으로 바꿔치기합니다.
-                planData[dateKey] = planData[dateKey][0]; 
+                let mergedBible = [];
+                let mergedAbbr = [];
+                let startChap = 999;
+                let endChap = 0;
+
+                // 배열 내부를 돌며 모든 성경 이름, 약어, 시작/끝 장 정보를 수집합니다.
+                planData[dateKey].forEach(plan => {
+                    mergedBible.push(plan.book); // ["오바댜", "요나"]
+                    mergedAbbr.push(plan.abbr);  // ["옵", "욘"]
+                    if(plan.start < startChap) startChap = plan.start;
+                    if(plan.end > endChap) endChap = plan.end;
+                });
+
+                // 기존 프로그램이 읽을 수 있는 '한 줄 객체 형태'로 변환하여 유실 없이 합칩니다.
+                // 결과물 예시 -> book: "오바댜, 요나", abbr: "옵, 욘", start: 1, end: 4
+                planData[dateKey] = {
+                    book: mergedBible.join(", "),
+                    abbr: mergedAbbr.join(", "),
+                    start: startChap,
+                    end: endChap,
+                    isMultiple: true,
+                    originalArray: planData[dateKey]
+                };
             }
         }
     }
-    // ⭐ [여기까지 복사해서 붙여넣으세요]
-            const now = new Date();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            document.getElementById('calendar-month').value = month;
-            loadToday();
-        };
+    // ------------------------------------------------------------------
+    // ⭐ [새로운 프로그램 삽입 끝]
+    // ------------------------------------------------------------------
+
+    // 3. 기존 프로그램 로직 (그대로 유지되는 부분입니다)
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    document.getElementById('calendar-month').value = month;
+    loadToday();
+};
+
 
        // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
 // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
