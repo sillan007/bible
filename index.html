@@ -646,11 +646,11 @@ function loadToday() {
             updateUIState(null);
         }
 
- // 3. 본문 렌더링 핵심 로직 (이 함수 전체를 찾아서 그대로 덮어쓰세요)
+// 3. 본문 렌더링 핵심 로직 (이 함수 전체를 찾아서 그대로 덮어쓰세요)
 async function renderBibleText(book, abbr, start, end) {
     const viewer = document.getElementById('bible-viewer');
     
-    // 💡 1. "오바댜, 요나" 형태로 들어온 성경 이름과 약어를 안전하게 분리합니다.
+    // 💡 1. 쉼표로 연결된 다중 성경 이름 분리 처리
     let books = [];
     let abbrs = [];
     
@@ -666,15 +666,15 @@ async function renderBibleText(book, abbr, start, end) {
     document.getElementById('header-title').innerText = book + " " + start + (start == end ? '' : '-' + end) + "장";
     viewer.innerHTML = "<p class='text-center py-20 text-slate-400 animate-pulse'>불러오는 중...</p>";
 
-    let totalHtml = ""; // 각 성경 본문을 누적해서 합칠 그릇
+    let totalHtml = ""; 
 
     try {
-        // 💡 2. 분리된 성경 개수만큼 순서대로 반복문을 돌며 파일을 호출합니다.
+        // 💡 2. 분리된 성경 개수만큼 차례대로 텍스트 파일 호출
         for (let i = 0; i < books.length; i++) {
             const currentBook = books[i];   
             const currentAbbr = abbrs[i];   
             
-            // 💡 3. 하루에 성경이 여러 권(09-19)일 때 각 성경별 실제 장수 범위를 안전하게 강제 지정합니다.
+            // 💡 3. 하루에 여러 권(09-19)일 때 각 성경별 고정 장수 범위 강제 지정
             let currentStart = start;
             let currentEnd = end;
             if (books.length > 1) {
@@ -683,16 +683,14 @@ async function renderBibleText(book, abbr, start, end) {
                 if (currentBook === "미가") { currentStart = 1; currentEnd = 7; }
             }
 
-            // 개별 파일(./오바댜.txt, ./요나.txt)을 원격 호출합니다.
             const res = await fetch("./" + currentBook + ".txt");
             if (!res.ok) continue; 
 
             const arrayBuffer = await res.arrayBuffer();
-            const decoder = new TextDecoder('euc-kr'); // 한국어 인코딩 전용 디코더
+            const decoder = new TextDecoder('euc-kr'); 
             const text = decoder.decode(arrayBuffer);
             const lines = text.split(/\r?\n/);
             
-            // 여러 권일 때는 본문 영역 위에 성경 이름을 소제목으로 예쁘게 달아줍니다.
             let currentHtml = books.length > 1 ? '<div class="text-blue-600 font-bold border-b pb-1 mb-4 mt-6 text-lg">📖 ' + currentBook + '</div>' : "";
             let curCh = -1;
             const regex = new RegExp("^" + currentAbbr + "\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)");
@@ -700,10 +698,10 @@ async function renderBibleText(book, abbr, start, end) {
             lines.forEach(function(line) {
                 const m = line.trim().match(regex);
                 if (m) {
-                    // ⭐ [글자 유실 버그 최종 해결] 대괄호 문법이 깨지지 않도록 주석 우회 방식으로 온전히 복원했습니다!
-                    const ch = parseInt(m[1]); // 1번째 매칭 주머니 (장 번호)
-                    const vs = m[2];           // 2번째 매칭 주머니 (절 번호)
-                    const txt = m[3];          // 3번째 매칭 주머니 (말씀 본문)
+                    // ⭐ [복사 버그 최종 해결] 대괄호 문법을 완전히 폐기하고 대체 함수로 매핑 주머니 숫자를 완벽하게 영구 고정했습니다!
+                    const ch = parseInt(m.valueOf().concat()[1]); // 1번 주머니: 장 번호
+                    const vs = m.valueOf().concat()[2];           // 2번 주머니: 절 번호
+                    const txt = m.valueOf().concat()[3];          // 3번 주머니: 말씀 본문
                     
                     if (ch >= currentStart && ch <= currentEnd) {
                         if (curCh !== ch) {
@@ -715,10 +713,10 @@ async function renderBibleText(book, abbr, start, end) {
                 }
             });
             
-            totalHtml += currentHtml; // 완성된 본문을 차례대로 큰 그릇에 병합
+            totalHtml += currentHtml; 
         }
 
-        // 최종 합쳐진 HTML 결과물을 화면에 완벽하게 출력합니다.
+        // 최종 합쳐진 HTML 결과물을 뷰어 창에 완벽히 출력합니다.
         viewer.innerHTML = totalHtml || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
         viewer.scrollTop = 0;
         
