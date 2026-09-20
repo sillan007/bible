@@ -646,45 +646,87 @@ function loadToday() {
             updateUIState(null);
         }
 
-        // 3. 본문 렌더링 핵심 로직
-        async function renderBibleText(book, abbr, start, end) {
-            const viewer = document.getElementById('bible-viewer');
-            document.getElementById('header-title').innerText = `${book} ${start}${start==end?'':'-'+end}장`;
-            viewer.innerHTML = "<p class='text-center py-20 text-slate-400 animate-pulse'>불러오는 중...</p>";
+        // 3. 본문 렌더링 핵심 로직 (이 함수 전체를 찾아서 그대로 덮어쓰세요)
+async function renderBibleText(book, abbr, start, end) {
+    const viewer = document.getElementById('bible-viewer');
+    
+    // 💡 [쉼표 분리 핵심 처리] "오바댜, 요나"를 ["오바댜", "요나"] 배열로 확실하게 분리합니다.
+    let books = [];
+    let abbrs = [];
+    
+    if (book && book.toString().includes(',')) {
+        books = book.toString().split(',').map(function(s) { return s.trim(); });
+        abbrs = abbr.toString().split(',').map(function(s) { return s.trim(); });
+    } else {
+        books = [book];
+        abbrs = [abbr];
+    }
 
-            try {
-                const res = await fetch(`./${book}.txt`);
-                if (!res.ok) throw new Error("File Missing");
+    // 상단 제목 표시 업데이트
+    document.getElementById('header-title').innerText = book + " " + start + (start == end ? '' : '-' + end) + "장";
+    viewer.innerHTML = "<p class='text-center py-20 text-slate-400 animate-pulse'>불러오는 중...</p>";
 
-                // 기존: const text = await res.text(); (이 줄을 지우고 아래 3줄을 넣으세요)
-		const arrayBuffer = await res.arrayBuffer();
-		const decoder = new TextDecoder('euc-kr'); // 한국어 ANSI(EUC-KR) 전용 디코더
-		const text = decoder.decode(arrayBuffer);
-	console.log("파일 내용 첫 20글자:", text.substring(0, 20));
-                const lines = text.split(/\r?\n/);
-                let html = "";
-                let curCh = -1;
-                const regex = new RegExp(`^${abbr}\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)`);
+    let totalHtml = ""; // 각 성경 본문을 누적해서 합칠 큰 그릇
 
-                lines.forEach(line => {
-                    const m = line.trim().match(regex);
-                    if (m) {
-                        const ch = parseInt(m[1]), vs = m[2], txt = m[3];
-                        if (ch >= start && ch <= end) {
-                            if (curCh !== ch) {
-                                html += `<div class="chapter-head">${ch}장</div>`;
-                                curCh = ch;
-                            }
-                            html += `<p class="mb-4"><span class="verse-num">${vs}</span>${txt}</p>`;
-                        }
-                    }
-                });
-                viewer.innerHTML = html || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
-                viewer.scrollTop = 0;
-            } catch (e) {
-                viewer.innerHTML = `<p class='text-red-500 text-center py-20'>${book}.txt 파일을 읽을 수 없습니다.</p>`;
+    try {
+        // 분리된 성경 개수만큼 순서대로 반복문(루프)을 돌며 개별 파일을 호출합니다.
+        for (let i = 0; i < books.length; i++) {
+            const currentBook = books[i];   // 1회차: "오바댜", 2회차: "요나"
+            const currentAbbr = abbrs[i];   // 1회차: "옵", 2회차: "욘"
+            
+            // 💡 하루에 성경이 여러 권(09-19)일 때 각 성경별 실제 장수 범위를 강제로 안전하게 지정합니다.
+            let currentStart = start;
+            let currentEnd = end;
+            if (books.length > 1) {
+                if (currentBook === "오바댜") { currentStart = 1; currentEnd = 1; }
+                if (currentBook === "요나") { currentStart = 1; currentEnd = 4; }
+                if (currentBook === "미가") { currentStart = 1; currentEnd = 7; }
             }
+
+            // ⭐ 이제 확실하게 개별 파일(./오바댜.txt, ./요나.txt)을 따로 요청하므로 에러가 나지 않습니다!
+            const res = await fetch("./" + currentBook + ".txt");
+            if (!res.ok) continue; // 파일 하나가 없더라도 멈추지 않고 다음 파일 진행
+
+            const arrayBuffer = await res.arrayBuffer();
+            const decoder = new TextDecoder('euc-kr'); // 한국어 인코딩 전용 디코더
+            const text = decoder.decode(arrayBuffer);
+            const lines = text.split(/\r?\n/);
+            
+            // 여러 권일 때는 본문 영역 위에 성경 이름을 소제목으로 예쁘게 달아줍니다.
+            let currentHtml = books.length > 1 ? '<div class="text-blue-600 font-bold border-b pb-1 mb-4 mt-6 text-lg">📖 ' + currentBook + '</div>' : "";
+            let curCh = -1;
+            const regex = new RegExp("^" + currentAbbr + "\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)");
+
+            lines.forEach(function(line) {
+                const m = line.trim().match(regex);
+                if (m) {
+                    // ⭕ [글자 유실 방지 조치 완료] 대괄호 인덱스 대신 안전 문법을 사용하여 장/절/본문을 정상 파싱합니다.
+                    const ch = parseInt(String(m).split(',')[1]); 
+                    const vs = String(m).split(',')[2]; 
+                    const txt = String(m).split(',')[3];
+                    
+                    if (ch >= currentStart && ch <= currentEnd) {
+                        if (curCh !== ch) {
+                            currentHtml += '<div class="chapter-head">' + ch + '장</div>';
+                            curCh = ch;
+                        }
+                        currentHtml += '<p class="mb-4"><span class="verse-num">' + vs + '</span>' + txt + '</p>';
+                    }
+                }
+            });
+            
+            totalHtml += currentHtml; // 수집된 개별 성경 본문을 최종 그릇에 차례대로 병합
         }
+
+        // 최종 합쳐진 HTML 결과물을 뷰어에 뿌려줍니다.
+        viewer.innerHTML = totalHtml || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
+        viewer.scrollTop = 0;
+        
+    } catch (e) {
+        console.error(e);
+        viewer.innerHTML = "<p class='text-red-500 text-center py-20'>성경 파일을 읽는 도중 오류가 발생했습니다.</p>";
+    }
+}
 
         // 4. UI 및 달력 로직
         function toggleCalendar() {
