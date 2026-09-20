@@ -545,6 +545,7 @@ window.onload = function() {
         };
 
        // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
+// [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
 function loadToday() {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -554,44 +555,49 @@ function loadToday() {
     currentActiveDate = dateKey;
     const viewer = document.getElementById("bible-viewer");
     
-    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인 (undefined 방지)
+    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인
     if (planData && planData[dateKey]) {
         let rawData = planData[dateKey];
         let plansArray = [];
-if (rawData && Array.isArray(rawData)) {
-    // 09-19 처럼 배열인 경우, 첫 번째 성경(오바댜) 데이터를 기준으로 강제 변환하여 undefined를 방지합니다.
-    rawData = rawData[0]; 
-}
 
-        // 💡 [핵심 에러 해결 코드] 
-        // 데이터가 배열([ ])이 아니라 단일 객체({ }) 한 줄 형식이면 컴퓨터가 스스로 판단하여 배열로 감싸줍니다.
+        // 데이터가 배열이 아니면 배열로 만들고, 배열이면 그대로 사용하여 모든 데이터를 확보합니다.
         if (!Array.isArray(rawData)) {
-            plansArray = [rawData]; // 한 줄 데이터 호환성 확보
+            plansArray = [rawData]; 
         } else {
-            plansArray = rawData;   // 두 줄 이상 데이터 그대로 사용
+            plansArray = rawData;   // [오바댜, 요나] 배열 전체를 온전히 유지
         }
         
         // 2. 본문 뷰어 타이틀 생성
         let htmlContent = `<h2 class="text-xl font-bold text-blue-600 mb-4">📅 오늘의 통독 범위 (${dateKey})</h2>`;
         
-        // 3. 한 줄이든 두 줄이든 무조건 반복문(forEach)을 에러 없이 돌며 화면을 그려줍니다.
-        plansArray.forEach(plan => {
+        // 3. ⭐ [배열 순회] 첫 번째 성경부터 마지막 성경까지 하나도 빠짐없이 화면에 추가합니다.
+        plansArray.forEach((plan, index) => {
             htmlContent += `
                 <div class="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <h3 class="text-lg font-bold text-slate-800">${plan.book} ${plan.start}장 ~ ${plan.end}장</h3>
                     <p class="text-sm text-slate-500 mt-2">[${plan.book} 본문 텍스트 연동 영역]</p>
                 </div>
             `;
+
+            // 💡 [핵심 추가] 성경 선택 상자(<select>) 및 UI 연동 부하 처리
+            // 하루에 읽을 성경이 여러 권일 경우, 우선 첫 번째 성경을 기본 선택 상태로 만들어 줍니다.
+            if (index === 0) {
+                const bibleSelect = document.querySelector("select[data-abbr]");
+                if (bibleSelect) {
+                    bibleSelect.value = plan.book; // 예: "오바댜" 자동 선택
+                    // 만약 프로그램 내부에 select 변경 시 장/절을 업데이트하는 함수가 있다면 여기서 호출 가능합니다.
+                }
+            }
         });
         
         viewer.innerHTML = htmlContent;
         
-         // 4. 하단 읽기 완료 버튼 상태 동기화
-        // 💡 readHistory 변수가 정의되어 있는지 안전하게 체크(typeof)하여 에러를 방지합니다.
+        // 4. 하단 읽기 완료 버튼 상태 동기화 (undefined 에러 방지 처리 완료)
         const isRead = (typeof readHistory !== 'undefined' && readHistory) ? !!readHistory[currentActiveDate] : false;
         updateButtonState(isRead);
+
     } else {
-        // 💡 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
+        // 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
         viewer.innerHTML = `
             <div class="text-center text-slate-400 mt-10">
                 <p class="font-bold text-slate-600 text-base">📅 오늘의 통독 계획이 없습니다.</p>
@@ -601,6 +607,7 @@ if (rawData && Array.isArray(rawData)) {
         updateButtonState(false);
     }
 }
+
 
 
         async function fetchBibleData(dateKey) {
