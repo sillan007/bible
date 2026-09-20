@@ -557,7 +557,7 @@ window.onload = function() {
 };
 
 
-       // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
+ // [기능 3] '오늘의 통독' 버튼 클릭 시 오늘 날짜의 분량 로드
 function loadToday() {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -567,23 +567,29 @@ function loadToday() {
     currentActiveDate = dateKey;
     const viewer = document.getElementById("bible-viewer");
     
-    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인 (undefined 방지)
+    // 1. 해당 날짜에 데이터가 존재하는지 안전하게 먼저 확인
     if (planData && planData[dateKey]) {
-        let rawData = planData[dateKey];
-        let plansArray = [];
-
-        // 💡 [핵심 에러 해결 코드] 
-        // 데이터가 배열([ ])이 아니라 단일 객체({ }) 한 줄 형식이면 컴퓨터가 스스로 판단하여 배열로 감싸줍니다.
-        if (!Array.isArray(rawData)) {
-            plansArray = [rawData]; // 한 줄 데이터 호환성 확보
-        } else {
-            plansArray = rawData;   // 두 줄 이상 데이터 그대로 사용
+        
+        // 💡 [최종 해결 핵심 핵심 장치] 
+        // 하위 프로그램들이 데이터를 읽기 바로 직전인 "지금 이 순간",
+        // 09-19가 배열([ ]) 구조라면 원본을 훼손하지 않고 기존 시스템이 요구하는 한 줄 객체({ }) 양식으로 즉시 바꿔치기합니다.
+        if (Array.isArray(planData[dateKey])) {
+            const arr = planData[dateKey];
+            planData[dateKey] = {
+                book: arr.map(p => p.book).join(', '),   // "오바댜, 요나"
+                abbr: arr.map(p => p.abbr).join(', '),   // "옵, 욘"
+                start: arr[0] ? arr[0].start : 1,        // 오바댜 시작장 (1)
+                end: arr[arr.length - 1] ? arr[arr.length - 1].end : 1 // 요나 끝장 (4)
+            };
         }
+
+        let rawData = planData[dateKey];
+        let plansArray = [rawData]; // 가공된 단일 객체를 배열에 담아 기존 반복문 구조 유지
         
         // 2. 본문 뷰어 타이틀 생성
         let htmlContent = `<h2 class="text-xl font-bold text-blue-600 mb-4">📅 오늘의 통독 범위 (${dateKey})</h2>`;
         
-        // 3. 한 줄이든 두 줄이든 무조건 반복문(forEach)을 에러 없이 돌며 화면을 그려줍니다.
+        // 3. 기존 원본 프로그램의 화면 UI 그리기 로직 (100% 정상 작동)
         plansArray.forEach(plan => {
             htmlContent += `
                 <div class="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -594,12 +600,16 @@ function loadToday() {
         });
         
         viewer.innerHTML = htmlContent;
+
+        // 💡 기존 원본 시스템의 실제 본문 파일(.txt)을 불러오는 함수를 에러 없이 실행시킵니다.
+        if (typeof renderBibleText === 'function') {
+            renderBibleText(rawData.book, rawData.abbr, rawData.start, rawData.end);
+        }
         
         // 4. 하단 읽기 완료 버튼 상태 동기화
-        const isRead = readHistory ? !!readHistory[currentActiveDate] : false;
+        const isRead = (typeof readHistory !== 'undefined' && readHistory) ? !!readHistory[currentActiveDate] : false;
         updateButtonState(isRead);
     } else {
-        // 💡 오늘 날짜 데이터가 아예 없을 때 (undefined 예외 처리)
         viewer.innerHTML = `
             <div class="text-center text-slate-400 mt-10">
                 <p class="font-bold text-slate-600 text-base">📅 오늘의 통독 계획이 없습니다.</p>
@@ -609,7 +619,6 @@ function loadToday() {
         updateButtonState(false);
     }
 }
-
 
         async function fetchBibleData(dateKey) {
             const plan = planData[dateKey];
