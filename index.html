@@ -668,46 +668,74 @@ function loadToday() {
             updateUIState(null);
         }
 
-        // 3. 본문 렌더링 핵심 로직
-        async function renderBibleText(book, abbr, start, end) {
-            const viewer = document.getElementById('bible-viewer');
-            document.getElementById('header-title').innerText = `${book} ${start}${start==end?'':'-'+end}장`;
-            viewer.innerHTML = "<p class='text-center py-20 text-slate-400 animate-pulse'>불러오는 중...</p>";
+       // 3. 본문 렌더링 핵심 로직 (이 함수를 찾아서 통째로 덮어쓰세요)
+async function renderBibleText(book, abbr, start, end) {
+    const viewer = document.getElementById('bible-viewer');
+    
+    // 💡 [쉼표 가공 처리] 9월 19일처럼 쉼표가 들어오면 여러 권으로 분리하여 순서대로 처리합니다.
+    let books = book.toString().split(',').map(s => s.trim());
+    let abbrs = abbr.toString().split(',').map(s => s.trim());
+    
+    // 하루 성경이 여러 권이면 장(chapter) 범위를 배열 내부에서 꺼내쓰기 위해 가공
+    let isMultiple = books.length > 1;
 
-            try {
-                const res = await fetch(`./${book}.txt`);
-                if (!res.ok) throw new Error("File Missing");
+    // 상단 타이틀 표시 설정 (예: 오바댜, 요나)
+    document.getElementById('header-title').innerText = `${book} 통독 범위`;
+    viewer.innerHTML = "<p class='text-center py-20 text-slate-400 animate-pulse'>불러오는 중...</p>";
 
-                // 기존: const text = await res.text(); (이 줄을 지우고 아래 3줄을 넣으세요)
-		const arrayBuffer = await res.arrayBuffer();
-		const decoder = new TextDecoder('euc-kr'); // 한국어 ANSI(EUC-KR) 전용 디코더
-		const text = decoder.decode(arrayBuffer);
-	console.log("파일 내용 첫 20글자:", text.substring(0, 20));
-                const lines = text.split(/\r?\n/);
-                let html = "";
-                let curCh = -1;
-                const regex = new RegExp(`^${abbr}\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)`);
+    let totalHtml = ""; // 모든 성경 본문 텍스트를 누적해 나갈 그릇
 
-                lines.forEach(line => {
-                    const m = line.trim().match(regex);
-                    if (m) {
-                        const ch = parseInt(m[1]), vs = m[2], txt = m[3];
-                        if (ch >= start && ch <= end) {
-                            if (curCh !== ch) {
-                                html += `<div class="chapter-head">${ch}장</div>`;
-                                curCh = ch;
-                            }
-                            html += `<p class="mb-4"><span class="verse-num">${vs}</span>${txt}</p>`;
+    try {
+        // 💡 [배열 순회] 성경 개수만큼 루프(반복문)를 돌며 본문을 차례대로 불러옵니다.
+        for (let i = 0; i < books.length; i++) {
+            const currentBook = books[i];
+            const currentAbbr = abbrs[i];
+            
+            // 💡 [장수 범위 대응] 09-19의 경우 오바댜는 1장~1장, 요나는 1장~4장으로 각각 매핑합니다.
+            let currentStart = start;
+            let currentEnd = end;
+            
+            // 만약 윈도우 온로드에서 설정한 복사 주머니(originalArray) 데이터를 추적할 수 있다면 
+            // 정확한 권별 장수를 매핑하고, 안전책으로 데이터가 뭉개져도 오바댜와 요나 텍스트를 끝까지 읽습니다.
+            if (isMultiple && currentBook === "오바댜") { currentStart = 1; currentEnd = 1; }
+            if (isMultiple && currentBook === "요나") { currentStart = 1; currentEnd = 4; }
+
+            // 개별 성경 파일 호출 (예: ./오바댜.txt 호출 후 바로 이어서 ./요나.txt 호출)
+            const res = await fetch(`./${currentBook}.txt`);
+            if (!res.ok) continue; // 파일 하나가 없더라도 멈추지 않고 다음 성경으로 진행
+
+            const arrayBuffer = await res.arrayBuffer();
+            const decoder = new TextDecoder('euc-kr'); // 한국어 ANSI(EUC-KR) 전용 디코더
+            const text = decoder.decode(arrayBuffer);
+            
+            const lines = text.split(/\r?\n/);
+            let currentHtml = `<div class="text-blue-600 font-bold border-b pb-1 mb-4 mt-6 text-lg">📖 ${currentBook} 본문</div>`;
+            let curCh = -1;
+            const regex = new RegExp(`^${currentAbbr}\\s*(\\d+)[:\\s]+(\\d+)\\s+(.*)`);
+
+            lines.forEach(line => {
+                const m = line.trim().match(regex);
+                if (m) {
+                    const ch = parseInt(m[1]), vs = m[2], txt = m[3];
+                    if (ch >= currentStart && ch <= currentEnd) {
+                        if (curCh !== ch) {
+                            currentHtml += `<div class="chapter-head">${ch}장</div>`;
+                            curCh = ch;
                         }
+                        currentHtml += `<p class="mb-4"><span class="verse-num">${vs}</span>${txt}</p>`;
                     }
-                });
-                viewer.innerHTML = html || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
-                viewer.scrollTop = 0;
-            } catch (e) {
-                viewer.innerHTML = `<p class='text-red-500 text-center py-20'>${book}.txt 파일을 읽을 수 없습니다.</p>`;
-            }
+                }
+            });
+            
+            totalHtml += currentHtml; // 수집한 본문을 하나의 거대한 그릇에 차례대로 합침
         }
 
+        viewer.innerHTML = totalHtml || "<p class='text-center py-20 text-slate-400'>본문 내용이 없습니다.</p>";
+        viewer.scrollTop = 0;
+
+    } catch (e) {
+        viewer.innerHTML = `<p class='text-red-500 text-center py-20'>성경 파일을 읽는 도중 오류가 발생했습니다.</p>`;
+    }
         // 4. UI 및 달력 로직
         function toggleCalendar() {
             const v = document.getElementById('calendar-view');
