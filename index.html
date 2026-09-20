@@ -546,6 +546,10 @@ function loadToday() {
     if (planData && planData[dateKey]) {
         let rawData = planData[dateKey];
         let plansArray = [];
+if (rawData && Array.isArray(rawData)) {
+    // 09-19 처럼 배열인 경우, 첫 번째 성경(오바댜) 데이터를 기준으로 강제 변환하여 undefined를 방지합니다.
+    rawData = rawData[0]; 
+}
 
         // 💡 [핵심 에러 해결 코드] 
         // 데이터가 배열([ ])이 아니라 단일 객체({ }) 한 줄 형식이면 컴퓨터가 스스로 판단하여 배열로 감싸줍니다.
