@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+html<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -17,7 +17,7 @@
                 <button onclick="toggleCalendar()" class="flex-1 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-blue-50">기록 달력</button>
             </div>
             <div class="flex gap-1">
-                <select id="book-select" onchange="updateChapterList()" class="flex-[2] p-2 border rounded-lg text-sm bg-white outline-none focus:border-blue-500">
+                <select id="book-select" onchange="updateChapterList()" class="flex- p-2 border rounded-lg text-sm bg-white outline-none focus:border-blue-500">
                     <option value="">성경 선택</option>
                     <!-- 구약성경 -->
                     <option value="창세기" data-abbr="창" data-max="50">창세기</option>
@@ -134,9 +134,10 @@
     </div>
 
     <script>
-        // 1. 일독표 데이터 구조 (두 줄 배열 구조와 한 줄 단일 객체 구조 혼합 지원)
+        // 1. 일독표 데이터 (업로드하신 12개월 분량의 원본 데이터가 유실 없이 저장되어 있습니다)
+        // [참고] 대용량 일독 데이터가 여기에 내장되어 작동합니다.
         const planData = {
-  "01-01": { "book": "창세기", "abbr": "창", "start": 1, "end": 3 },
+            "01-01": { "book": "창세기", "abbr": "창", "start": 1, "end": 3 },
 "01-02": { "book": "창세기", "abbr": "창", "start": 4, "end": 6 },
 "01-03": { "book": "창세기", "abbr": "창", "start": 7, "end": 9 },
 "01-04": { "book": "창세기", "abbr": "창", "start": 10, "end": 13 },
@@ -507,17 +508,16 @@
 "12-31": { "book": "요한계시록", "abbr": "계", "start": 20, "end": 22 },
         };
 
-    let currentActiveDate = ""; // 현재 활성화된 날짜 키 ("MM-DD")
+        let currentActiveDate = ""; 
         let readHistory = JSON.parse(localStorage.getItem("bible_read_history")) || {};
 
-        // 안전하게 단일 데이터 및 배열 데이터를 무조건 배열 표준으로 가공하는 도구 함수
+        // [핵심 해결 로직] 단일 객체({})와 복수 배열([]) 구조를 스스로 식별해 정형화하는 보조 함수
         function getSafePlanArray(dateKey) {
             if (!planData || !planData[dateKey]) return null;
             const rawData = planData[dateKey];
             return Array.isArray(rawData) ? rawData : [rawData];
         }
 
-        // 초기 앱 구동 설정
         window.onload = function() {
             const now = new Date();
             const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
